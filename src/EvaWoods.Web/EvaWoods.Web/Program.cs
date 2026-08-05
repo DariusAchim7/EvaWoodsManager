@@ -29,6 +29,7 @@ using EvaWoods.Infrastructure.Oferte;
 using MudBlazor;
 
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -58,6 +59,19 @@ builder.Services.AddScoped<ICalculMaterialService, CalculMaterialService>();
 builder.Services.AddScoped<ILinieOfertaRepository, LinieOfertaRepository>();
 builder.Services.AddScoped<IOfertaService, OfertaService>();
 
+var pgHost = Environment.GetEnvironmentVariable("PGHOST");
+if (!string.IsNullOrEmpty(pgHost))
+{
+    var pgPort = Environment.GetEnvironmentVariable("PGPORT") ?? "5432";
+    var pgDatabase = Environment.GetEnvironmentVariable("PGDATABASE");
+    var pgUser = Environment.GetEnvironmentVariable("PGUSER");
+    var pgPassword = Environment.GetEnvironmentVariable("PGPASSWORD");
+
+    builder.Configuration["ConnectionStrings:DefaultConnection"] =
+        $"Host={pgHost};Port={pgPort};Database={pgDatabase};Username={pgUser};Password={pgPassword};SSL Mode=Require;Trust Server Certificate=true";
+}
+
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -78,12 +92,24 @@ builder.Services.AddCascadingAuthenticationState();
 
 MudGlobal.InputDefaults.Variant = Variant.Outlined;
 
+var railwayPort = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(railwayPort))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{railwayPort}");
+}
+
 var app = builder.Build();
+
+
+app.UseForwardedHeaders(new Microsoft.AspNetCore.Builder.ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+});
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    app.UseExceptionHandler("/Error", createScopeForErrors: true); 
     app.UseHsts();
 }
 
