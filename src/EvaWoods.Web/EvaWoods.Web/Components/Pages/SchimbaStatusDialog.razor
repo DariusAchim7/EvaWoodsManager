@@ -1,0 +1,31 @@
+@using EvaWoods.Domain.Proiecte
+
+<MudDialog>
+    <DialogContent>
+        <MudList T="StatusProiect" Clickable="true">
+            <MudListItem T="StatusProiect" OnClick="@(() => Selecteaza(StatusProiect.OfertaTrimisa))">Ofertă trimisă</MudListItem>
+            <MudListItem T="StatusProiect" OnClick="@(() => Selecteaza(StatusProiect.Masuratori))">Măsurători</MudListItem>
+            <MudListItem T="StatusProiect" OnClick="@(() => Selecteaza(StatusProiect.Proiectare))">Proiectare</MudListItem>
+            <MudListItem T="StatusProiect" OnClick="@(() => Selecteaza(StatusProiect.InProductie))">În producție</MudListItem>
+            <MudListItem T="StatusProiect" OnClick="@(() => Selecteaza(StatusProiect.LaMontaj))">La montaj</MudListItem>
+            <MudListItem T="StatusProiect" OnClick="@(() => Selecteaza(StatusProiect.Finalizat))">Finalizat</MudListItem>
+        </MudList>
+        <MudTextField T="string" @bind-Value="_observatie" Label="Observație (opțional)" Lines="2" Variant="Variant.Outlined" Class="mt-3" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Anuleaza">Anulează</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private string? _observatie;
+
+    private void Selecteaza(StatusProiect status)
+    {
+        MudDialog.Close(DialogResult.Ok((status, _observatie)));
+    }
+
+    private void Anuleaza() => MudDialog.Cancel();
+}

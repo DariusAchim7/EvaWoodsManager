@@ -1,0 +1,58 @@
+@using EvaWoods.Application.Oferte
+@using EvaWoods.Domain.Produse
+@inject IOfertaService OfertaService
+
+<MudDialog>
+    <DialogContent>
+        <MudNumericField @bind-Value="_cantitate" Label="@($"Cantitate ({NumeUM(UM)})")" Min="0.01m" Required="true" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Anuleaza">Anulează</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Salveaza" Disabled="_seSalveaza">Salvează</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid LinieId { get; set; }
+    [Parameter] public decimal CantitateActuala { get; set; }
+    [Parameter] public UnitateMasura UM { get; set; }
+
+    private decimal _cantitate;
+    private bool _seSalveaza;
+
+    protected override void OnInitialized()
+    {
+        _cantitate = CantitateActuala;
+    }
+
+    private async Task Salveaza()
+    {
+        if (_cantitate <= 0) return;
+
+        _seSalveaza = true;
+        await OfertaService.ActualizeazaCantitateAsync(LinieId, _cantitate);
+        _seSalveaza = false;
+
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Anuleaza() => MudDialog.Cancel();
+
+    private static string NumeUM(UnitateMasura um) => um switch
+    {
+        UnitateMasura.Bucata => "buc",
+        UnitateMasura.Set => "set",
+        UnitateMasura.Foaie => "foaie",
+        UnitateMasura.MetruLiniar => "ml",
+        UnitateMasura.MetruPatrat => "m²",
+        UnitateMasura.Kilogram => "kg",
+        UnitateMasura.Litru => "l",
+        UnitateMasura.Ora => "oră",
+        UnitateMasura.Zi => "zi",
+        UnitateMasura.Lucrare => "lucrare",
+        UnitateMasura.Transport => "transport",
+        UnitateMasura.Procent => "%",
+        _ => um.ToString()
+    };
+}

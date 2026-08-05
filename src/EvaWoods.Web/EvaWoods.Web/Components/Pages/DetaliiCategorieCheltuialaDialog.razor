@@ -1,0 +1,47 @@
+@using EvaWoods.Application.Cheltuieli
+@using EvaWoods.Domain.Cheltuieli
+
+<MudDialog>
+    <DialogContent>
+        @if (Cheltuieli.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">Nicio cheltuială confirmată în această categorie încă.</MudAlert>
+        }
+        else
+        {
+            <MudStack Spacing="2">
+                @foreach (var grup in Grupuri)
+                {
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2">@grup.Nume</MudText>
+                        <MudText Typo="Typo.body2" Class="font-weight-medium">@FormateazaLei(grup.Suma)</MudText>
+                    </MudStack>
+                }
+                <MudDivider Class="my-1" />
+                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                    <MudText Typo="Typo.subtitle2">Total</MudText>
+                    <MudText Typo="Typo.subtitle2">@FormateazaLei(Cheltuieli.Sum(c => c.Total))</MudText>
+                </MudStack>
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Inchide">Închide</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public CategorieCheltuiala Categorie { get; set; }
+    [Parameter] public List<CheltuialaDto> Cheltuieli { get; set; } = new();
+
+    private IEnumerable<(string Nume, decimal Suma)> Grupuri =>
+        Cheltuieli
+            .GroupBy(c => string.IsNullOrWhiteSpace(c.Subcategorie) ? "Fără subcategorie" : c.Subcategorie!)
+            .Select(g => (g.Key, g.Sum(c => c.Total)))
+            .OrderByDescending(g => g.Item2);
+
+    private void Inchide() => MudDialog.Close(DialogResult.Ok(true));
+
+    private static string FormateazaLei(decimal valoare) => $"{valoare:N2} lei";
+}

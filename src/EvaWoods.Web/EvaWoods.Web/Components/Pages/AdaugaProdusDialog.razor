@@ -1,0 +1,247 @@
+@using EvaWoods.Application.Produse
+@using EvaWoods.Application.Cheltuieli
+@using EvaWoods.Domain.Produse
+@inject IProdusService ProdusService
+@inject ICheltuialaService CheltuialaService
+@inject IDialogService DialogService
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model">
+            <MudTextField @bind-Value="_model.Nume" Label="Nume produs" Required="true" RequiredError="Numele este obligatoriu." />
+
+            <MudGrid Class="mt-1">
+                <MudItem xs="6">
+                    <MudSelect T="CategorieProdus" @bind-Value="_model.Categorie" Label="Categorie" Required="true">
+                        <MudSelectItem T="CategorieProdus" Value="CategorieProdus.Materiale">Materiale</MudSelectItem>
+                        <MudSelectItem T="CategorieProdus" Value="CategorieProdus.Consumabile">Consumabile</MudSelectItem>
+                        <MudSelectItem T="CategorieProdus" Value="CategorieProdus.Feronerie">Feronerie</MudSelectItem>
+                        <MudSelectItem T="CategorieProdus" Value="CategorieProdus.Servicii">Servicii</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudTextField @bind-Value="_model.Subcategorie" Label="Subcategorie (opțional)" />
+                </MudItem>
+            </MudGrid>
+
+            <MudGrid Class="mt-1">
+                <MudItem xs="6">
+                    <MudSelect T="UnitateMasura" @bind-Value="_model.UM" Label="Unitate de măsură" Required="true">
+                        <MudSelectItem T="UnitateMasura" Value="UnitateMasura.Bucata">Bucată</MudSelectItem>
+                        <MudSelectItem T="UnitateMasura" Value="UnitateMasura.Set">Set</MudSelectItem>
+                        <MudSelectItem T="UnitateMasura" Value="UnitateMasura.Foaie">Foaie</MudSelectItem>
+                        <MudSelectItem T="UnitateMasura" Value="UnitateMasura.MetruLiniar">Metru liniar</MudSelectItem>
+                        <MudSelectItem T="UnitateMasura" Value="UnitateMasura.MetruPatrat">Metru pătrat</MudSelectItem>
+                        <MudSelectItem T="UnitateMasura" Value="UnitateMasura.Kilogram">Kilogram</MudSelectItem>
+                        <MudSelectItem T="UnitateMasura" Value="UnitateMasura.Litru">Litru</MudSelectItem>
+                        <MudSelectItem T="UnitateMasura" Value="UnitateMasura.Ora">Oră</MudSelectItem>
+                        <MudSelectItem T="UnitateMasura" Value="UnitateMasura.Zi">Zi</MudSelectItem>
+                        <MudSelectItem T="UnitateMasura" Value="UnitateMasura.Lucrare">Lucrare</MudSelectItem>
+                        <MudSelectItem T="UnitateMasura" Value="UnitateMasura.Transport">Transport</MudSelectItem>
+                        <MudSelectItem T="UnitateMasura" Value="UnitateMasura.Procent">Procent</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudSelect T="Guid?" @bind-Value="_model.FurnizorId" Label="Furnizor (opțional)" Clearable="true">
+                        @if (_furnizori is not null)
+                        {
+                            @foreach (var furnizor in _furnizori)
+                            {
+                                <MudSelectItem T="Guid?" Value="furnizor.Id">@furnizor.Nume</MudSelectItem>
+                            }
+                        }
+                    </MudSelect>
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="DeschideDialogAdaugaFurnizor">
+                        + Adaugă furnizor
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+
+            <MudGrid Class="mt-1">
+                <MudItem xs="4">
+                    <MudNumericField @bind-Value="_model.PretAchizitie" Label="Preț achiziție (lei)" Min="0m" Required="true" />
+                </MudItem>
+                <MudItem xs="4">
+                    <MudNumericField @bind-Value="_model.PretCalcul" Label="Preț calcul (opțional)" Min="0m" />
+                </MudItem>
+                <MudItem xs="4">
+                    <MudNumericField @bind-Value="_model.ProcentTva" Label="TVA %" Min="0m" />
+                </MudItem>
+            </MudGrid>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                Dacă nu completezi „Preț calcul", se folosește automat prețul de achiziție în deviz.
+            </MudText>
+
+            @if (_model.Categorie == CategorieProdus.Materiale)
+            {
+                <MudText Typo="Typo.subtitle2" Class="mt-3 mb-1">Detalii foaie (pentru calculul de debitare)</MudText>
+                <MudGrid>
+                    <MudItem xs="4">
+                        <MudNumericField @bind-Value="_model.LungimeFoaieMm" Label="Lungime (mm)" Min="0m" />
+                    </MudItem>
+                    <MudItem xs="4">
+                        <MudNumericField @bind-Value="_model.LatimeFoaieMm" Label="Lățime (mm)" Min="0m" />
+                    </MudItem>
+                    <MudItem xs="4">
+                        <MudNumericField @bind-Value="_model.GrosimeMm" Label="Grosime (mm)" Min="0m" />
+                    </MudItem>
+                </MudGrid>
+                <MudGrid Class="mt-1">
+                    <MudItem xs="6">
+                        <MudNumericField @bind-Value="_model.KerfMm" Label="Kerf / tăietură (mm)" Min="0m" />
+                    </MudItem>
+                    <MudItem xs="6" Class="d-flex align-center">
+                        <MudCheckBox T="bool" @bind-Value="_model.PermiteRotire" Label="Permite rotire piese 90°" />
+                    </MudItem>
+                </MudGrid>
+            }
+            @if (_model.Categorie == CategorieProdus.Materiale || _model.Categorie == CategorieProdus.Consumabile)
+            {
+                <MudSelect T="Guid?" @bind-Value="_model.ServiciuAsociatId" Label="Serviciu asociat (opțional)" Clearable="true" Class="mt-3">
+                    @foreach (var serviciu in _servicii)
+                    {
+                        <MudSelectItem T="Guid?" Value="serviciu.Id">@serviciu.Nume</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                    La sincronizarea materialelor, acest serviciu se adaugă automat în Calcul preț, cu aceeași cantitate.
+                </MudText>
+            }
+
+            <MudTextField @bind-Value="_model.Observatii" Label="Observații (opțional)" Lines="2" Class="mt-3" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Anuleaza">Anulează</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Salveaza" Disabled="_seSalveaza">Salvează</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public ProdusDto? ProdusDeEditat { get; set; }
+
+    private MudForm _form = default!;
+    private bool _seSalveaza;
+    private List<FurnizorDto>? _furnizori;
+    private readonly ModelProdus _model = new();
+    private List<ProdusDto> _servicii = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _furnizori = (await CheltuialaService.ObtineFurnizoriAsync()).ToList();
+        _servicii = (await ProdusService.ObtineToateProduseleAsync())
+            .Where(p => p.EsteActiv && p.Categorie == CategorieProdus.Servicii)
+            .OrderBy(p => p.Nume)
+            .ToList();
+
+        if (ProdusDeEditat is not null)
+        {
+            _model.Nume = ProdusDeEditat.Nume;
+            _model.Categorie = ProdusDeEditat.Categorie;
+            _model.Subcategorie = ProdusDeEditat.Subcategorie;
+            _model.UM = ProdusDeEditat.UM;
+            _model.PretAchizitie = ProdusDeEditat.PretAchizitie;
+            _model.PretCalcul = ProdusDeEditat.PretCalcul;
+            _model.ProcentTva = ProdusDeEditat.ProcentTva;
+            _model.FurnizorId = ProdusDeEditat.FurnizorId;
+            _model.Observatii = ProdusDeEditat.Observatii;
+            _model.LungimeFoaieMm = ProdusDeEditat.LungimeFoaieMm;
+            _model.LatimeFoaieMm = ProdusDeEditat.LatimeFoaieMm;
+            _model.GrosimeMm = ProdusDeEditat.GrosimeMm;
+            _model.PermiteRotire = ProdusDeEditat.PermiteRotire;
+            _model.KerfMm = ProdusDeEditat.KerfMm ?? 4m;
+            _model.ServiciuAsociatId = ProdusDeEditat.ServiciuAsociatId;
+        }
+    }
+
+    private async Task DeschideDialogAdaugaFurnizor()
+    {
+        var dialog = await DialogService.ShowAsync<AdaugaFurnizorDialog>("Adaugă furnizor");
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false, Data: FurnizorDto furnizorNou })
+        {
+            _furnizori = (await CheltuialaService.ObtineFurnizoriAsync()).ToList();
+            _model.FurnizorId = furnizorNou.Id;
+        }
+    }
+
+    private async Task Salveaza()
+    {
+        await _form.Validate();
+        if (!_form.IsValid) return;
+
+        if (_model.Categorie == CategorieProdus.Materiale &&
+            (_model.LungimeFoaieMm is null or <= 0 || _model.LatimeFoaieMm is null or <= 0))
+        {
+            return;
+        }
+
+        _seSalveaza = true;
+
+        if (ProdusDeEditat is not null)
+        {
+            await ProdusService.ActualizeazaProdusAsync(new ActualizeazaProdusRequest(
+                Id: ProdusDeEditat.Id,
+                Nume: _model.Nume,
+                Categorie: _model.Categorie,
+                Subcategorie: _model.Subcategorie,
+                UM: _model.UM,
+                PretAchizitie: _model.PretAchizitie,
+                PretCalcul: _model.PretCalcul,
+                ProcentTva: _model.ProcentTva,
+                FurnizorId: _model.FurnizorId,
+                Observatii: _model.Observatii,
+                LungimeFoaieMm: _model.LungimeFoaieMm,
+                LatimeFoaieMm: _model.LatimeFoaieMm,
+                GrosimeMm: _model.GrosimeMm,
+                PermiteRotire: _model.PermiteRotire,
+                KerfMm: _model.KerfMm,
+                ServiciuAsociatId: _model.ServiciuAsociatId));
+        }
+        else
+        {
+            await ProdusService.CreeazaProdusAsync(new CreeazaProdusRequest(
+                Nume: _model.Nume,
+                Categorie: _model.Categorie,
+                UM: _model.UM,
+                PretAchizitie: _model.PretAchizitie,
+                PretCalcul: _model.PretCalcul,
+                ProcentTva: _model.ProcentTva,
+                Subcategorie: _model.Subcategorie,
+                FurnizorId: _model.FurnizorId,
+                Observatii: _model.Observatii,
+                LungimeFoaieMm: _model.LungimeFoaieMm,
+                LatimeFoaieMm: _model.LatimeFoaieMm,
+                GrosimeMm: _model.GrosimeMm,
+                PermiteRotire: _model.PermiteRotire,
+                KerfMm: _model.KerfMm,
+                ServiciuAsociatId: _model.ServiciuAsociatId));
+        }
+
+        _seSalveaza = false;
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Anuleaza() => MudDialog.Cancel();
+
+    private class ModelProdus
+    {
+        public string Nume { get; set; } = string.Empty;
+        public CategorieProdus Categorie { get; set; } = CategorieProdus.Materiale;
+        public string? Subcategorie { get; set; }
+        public UnitateMasura UM { get; set; } = UnitateMasura.Bucata;
+        public decimal PretAchizitie { get; set; }
+        public decimal? PretCalcul { get; set; }
+        public decimal ProcentTva { get; set; } = 19m;
+        public Guid? FurnizorId { get; set; }
+        public string? Observatii { get; set; }
+        public decimal? LungimeFoaieMm { get; set; }
+        public decimal? LatimeFoaieMm { get; set; }
+        public decimal? GrosimeMm { get; set; }
+        public bool PermiteRotire { get; set; }
+        public decimal? KerfMm { get; set; } = 4m;
+        public Guid? ServiciuAsociatId { get; set; }
+    }
+}

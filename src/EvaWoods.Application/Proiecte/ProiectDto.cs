@@ -1,0 +1,37 @@
+using EvaWoods.Domain.Proiecte;
+
+namespace EvaWoods.Application.Proiecte;
+
+public record ProiectDto(
+    Guid Id,
+    string CodProiect,
+    string Nume,
+    string? Subtip,
+    TipPrincipalProiect? TipPrincipal,
+    string? Descriere,
+    Guid ClientId,
+    string ClientNume,
+    string ClientTelefon,
+    string? ClientEmail,
+    string ClientLocalitate,
+    StatusProiect Status,
+    decimal Valoare,
+    DateTime? TermenLimita,
+    int Progres,
+    string? Note,
+    string? AdresaMontaj,
+    string? ObservatiiClient,
+    string? Etaj,
+    bool? AreLift,
+    string? AccesAuto,
+    string? LocParcare,
+    string? PersoanaContactMontaj,
+    string? IntervalOrarPreferat,
+    string? ObservatiiTransport,
+    string? DescriereUrmatorulPas,
+    DateTime? TermenUrmatorulPas,
+    decimal? BugetAlocat,
+    decimal? ProcentManopera,
+    decimal? AvansProcent,
+    int? TermenExecutieZile,
+    int? ValabilitateOfertaZile);

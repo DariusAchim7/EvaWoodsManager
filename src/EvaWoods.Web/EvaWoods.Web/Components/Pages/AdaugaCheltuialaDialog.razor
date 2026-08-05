@@ -1,0 +1,338 @@
+@using EvaWoods.Application.Cheltuieli
+@using EvaWoods.Domain.Cheltuieli
+@inject ICheltuialaService CheltuialaService
+@inject IDialogService DialogService
+
+<MudDialog Class="cheltuiala-dialog-lat">
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12" md="8">
+                <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">
+                    @(EsteEditare ? "Editează cheltuiala selectată." : "Adaugă manual o cheltuială asociată proiectului curent.")
+                </MudText>
+
+                <MudTextField @bind-Value="_model.Descriere" Label="Descriere cheltuială"
+                              Placeholder="Ex: Placă PAL Stejar A/B 18 mm" Required="true"
+                              RequiredError="Descrierea este obligatorie."
+                              @bind-Value:after="ActualizeazaCategorieRecomandata" />
+
+                <MudGrid Class="mt-1">
+                    <MudItem xs="12" sm="4">
+                        <MudSelect T="CategorieCheltuiala" @bind-Value="_model.Categorie" Label="Categorie" Required="true">
+                            <MudSelectItem T="CategorieCheltuiala" Value="CategorieCheltuiala.Materiale">Materiale</MudSelectItem>
+                            <MudSelectItem T="CategorieCheltuiala" Value="CategorieCheltuiala.Servicii">Servicii</MudSelectItem>
+                            <MudSelectItem T="CategorieCheltuiala" Value="CategorieCheltuiala.AlteCheltuieli">Alte cheltuieli</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudTextField @bind-Value="_model.Subcategorie" Label="Subcategorie (opțional)" />
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudSelect T="Guid?" @bind-Value="_model.FurnizorId" Label="Furnizor" Clearable="true">
+                            @if (_furnizori is not null)
+                            {
+                                @foreach (var furnizor in _furnizori)
+                                {
+                                    <MudSelectItem T="Guid?" Value="furnizor.Id">@furnizor.Nume</MudSelectItem>
+                                }
+                            }
+                        </MudSelect>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="DeschideDialogAdaugaFurnizor">
+                            + Adaugă furnizor
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+
+                <MudGrid Class="mt-1">
+                    <MudItem xs="12" sm="6">
+                        <MudDatePicker @bind-Date="_model.Data" Label="Data cheltuielii" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_model.NumarFactura" Label="Număr factură" Placeholder="Ex: F1234" />
+                    </MudItem>
+                </MudGrid>
+
+                <MudGrid Class="mt-1">
+                    <MudItem xs="6" sm="3">
+                        <MudNumericField @bind-Value="_model.ValoareFaraTva" Label="Valoare fără TVA" Min="0m"
+                                          @bind-Value:after="Recalculeaza" />
+                    </MudItem>
+                    <MudItem xs="6" sm="3">
+                        <MudNumericField @bind-Value="_model.ProcentTva" Label="TVA %" Min="0m"
+                                          @bind-Value:after="Recalculeaza" />
+                    </MudItem>
+                    <MudItem xs="6" sm="3">
+                        <MudTextField T="string" Value="@FormateazaLei(_tva)" Label="TVA" ReadOnly="true" />
+                    </MudItem>
+                    <MudItem xs="6" sm="3">
+                        <MudTextField T="string" Value="@FormateazaLei(_total)" Label="Total" ReadOnly="true" />
+                    </MudItem>
+                </MudGrid>
+
+                <MudGrid Class="mt-1">
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="MetodaPlata?" @bind-Value="_model.MetodaPlata" Label="Metodă de plată" Clearable="true">
+                            <MudSelectItem T="MetodaPlata?" Value="MetodaPlata.Numerar">Numerar</MudSelectItem>
+                            <MudSelectItem T="MetodaPlata?" Value="MetodaPlata.Card">Card</MudSelectItem>
+                            <MudSelectItem T="MetodaPlata?" Value="MetodaPlata.TransferBancar">Transfer bancar</MudSelectItem>
+                            <MudSelectItem T="MetodaPlata?" Value="MetodaPlata.Altul">Altul</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary mb-1">Status plată</MudText>
+                        <MudStack Row="true" Spacing="1">
+                            <MudButton Variant="@(_model.StatusPlata == StatusPlata.Platita ? Variant.Filled : Variant.Outlined)"
+                                       Color="Color.Success" Size="Size.Small"
+                                       OnClick="@(() => _model.StatusPlata = StatusPlata.Platita)">
+                                Plătită
+                            </MudButton>
+                            <MudButton Variant="@(_model.StatusPlata == StatusPlata.InAsteptare ? Variant.Filled : Variant.Outlined)"
+                                       Color="Color.Warning" Size="Size.Small"
+                                       OnClick="@(() => _model.StatusPlata = StatusPlata.InAsteptare)">
+                                În așteptare
+                            </MudButton>
+                        </MudStack>
+                    </MudItem>
+                </MudGrid>
+
+                <MudGrid Class="mt-3">
+                    <MudItem xs="12" sm="6">
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">Atașează factură</MudText>
+                        <MudPaper Class="pa-4 d-flex flex-column align-center" Elevation="0"
+                                  Style="border: 1px dashed var(--mud-palette-lines-default); border-radius: 8px; height: 100%;">
+                            <MudIcon Icon="@Icons.Material.Outlined.AttachFile" Class="mud-text-secondary mb-1" />
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">PDF, JPG, PNG sau scan • Max. 10MB</MudText>
+                            <MudTooltip Text="În curând">
+                                <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Disabled="true" Class="mt-1">
+                                    Alege fișier
+                                </MudButton>
+                            </MudTooltip>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_model.Observatii" Label="Observații" Lines="5"
+                                      MaxLength="500" Counter="500" Placeholder="Adaugă observații suplimentare..." />
+                    </MudItem>
+                </MudGrid>
+
+                <MudCheckBox T="bool" @bind-Value="_model.IncludeInBuget" Label="Include în bugetul proiectului" Class="mt-2"
+                             @bind-Value:after="Recalculeaza" />
+                <MudCheckBox T="bool" @bind-Value="_marcheazaCaPlatita" Label="Marchează ca plătită" @bind-Value:after="ActualizeazaStatusPlataDinCheckbox" />
+            </MudItem>
+
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%; background-color: #eef6ee;">
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Rezumat rapid</MudText>
+
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Buget rămas</MudText>
+                    @if (BugetRamasLive.HasValue)
+                    {
+                        <MudText Typo="Typo.h6" Color="@(BugetRamasLive.Value >= 0 ? Color.Success : Color.Error)">
+                            @FormateazaLei(BugetRamasLive.Value)
+                        </MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Fără buget alocat pentru acest proiect.</MudText>
+                    }
+
+                    <MudDivider Class="my-2" />
+
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Categorie recomandată</MudText>
+                    <MudText Typo="Typo.subtitle1" Color="Color.Primary">@NumeCategorie(_categorieRecomandata)</MudText>
+
+                    <MudDivider Class="my-2" />
+
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        Cheltuielile confirmate vor fi incluse în calculul profitului proiectului.
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Anuleaza">Anulează</MudButton>
+        @if (EsteEditare)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SalveazaEditare" Disabled="_seSalveaza">
+                Salvează
+            </MudButton>
+        }
+        else
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => Salveaza(StatusCheltuiala.Ciorna))" Disabled="_seSalveaza">
+                Salvează ciornă
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => Salveaza(StatusCheltuiala.Confirmata))" Disabled="_seSalveaza">
+                Salvează și confirmă
+            </MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid ProiectId { get; set; }
+    [Parameter] public CheltuialaDto? CheltuialaDeEditat { get; set; }
+
+    private bool EsteEditare => CheltuialaDeEditat is not null;
+
+    private bool _seSalveaza;
+    private bool _marcheazaCaPlatita;
+    private decimal _tva;
+    private decimal _total;
+    private CategorieCheltuiala _categorieRecomandata = CategorieCheltuiala.AlteCheltuieli;
+    private decimal? _bugetRamas;
+    private List<FurnizorDto>? _furnizori;
+    private readonly ModelCheltuiala _model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _furnizori = (await CheltuialaService.ObtineFurnizoriAsync()).ToList();
+        _bugetRamas = await CheltuialaService.ObtineBugetRamasAsync(ProiectId);
+
+        if (CheltuialaDeEditat is not null)
+        {
+            _model.Descriere = CheltuialaDeEditat.Descriere;
+            _model.Categorie = CheltuialaDeEditat.Categorie;
+            _model.Subcategorie = CheltuialaDeEditat.Subcategorie;
+            _model.FurnizorId = CheltuialaDeEditat.FurnizorId;
+            _model.Data = CheltuialaDeEditat.Data;
+            _model.NumarFactura = CheltuialaDeEditat.NumarFactura;
+            _model.ValoareFaraTva = CheltuialaDeEditat.ValoareFaraTva;
+            _model.ProcentTva = CheltuialaDeEditat.ProcentTva;
+            _model.MetodaPlata = CheltuialaDeEditat.MetodaPlata;
+            _model.StatusPlata = CheltuialaDeEditat.StatusPlata;
+            _model.IncludeInBuget = CheltuialaDeEditat.IncludeInBuget;
+            _model.Observatii = CheltuialaDeEditat.Observatii;
+            _marcheazaCaPlatita = CheltuialaDeEditat.StatusPlata == StatusPlata.Platita;
+        }
+
+        Recalculeaza();
+        ActualizeazaCategorieRecomandata();
+    }
+
+    private void Recalculeaza()
+    {
+        _tva = Math.Round(_model.ValoareFaraTva * _model.ProcentTva / 100m, 2);
+        _total = _model.ValoareFaraTva + _tva;
+    }
+
+    private decimal? BugetRamasLive =>
+        _bugetRamas.HasValue
+            ? _bugetRamas.Value - (_model.IncludeInBuget ? _total : 0)
+            : null;
+
+    private void ActualizeazaCategorieRecomandata()
+    {
+        var text = (_model.Descriere ?? string.Empty).ToLowerInvariant();
+
+        if (text.Contains("montaj") || text.Contains("transport") || text.Contains("manoper") || text.Contains("serviciu"))
+        {
+            _categorieRecomandata = CategorieCheltuiala.Servicii;
+        }
+        else if (text.Contains("pal") || text.Contains("mdf") || text.Contains("plac") || text.Contains("material") || text.Contains("feronerie") || text.Contains("cant"))
+        {
+            _categorieRecomandata = CategorieCheltuiala.Materiale;
+        }
+        else
+        {
+            _categorieRecomandata = CategorieCheltuiala.AlteCheltuieli;
+        }
+    }
+
+    private void ActualizeazaStatusPlataDinCheckbox()
+    {
+        _model.StatusPlata = _marcheazaCaPlatita ? StatusPlata.Platita : StatusPlata.InAsteptare;
+    }
+
+    private async Task DeschideDialogAdaugaFurnizor()
+    {
+        var dialog = await DialogService.ShowAsync<AdaugaFurnizorDialog>("Adaugă furnizor");
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false, Data: FurnizorDto furnizorNou })
+        {
+            _furnizori = (await CheltuialaService.ObtineFurnizoriAsync()).ToList();
+            _model.FurnizorId = furnizorNou.Id;
+        }
+    }
+
+    private async Task Salveaza(StatusCheltuiala status)
+    {
+        if (string.IsNullOrWhiteSpace(_model.Descriere)) return;
+
+        _seSalveaza = true;
+
+        await CheltuialaService.CreeazaCheltuialaAsync(new CreeazaCheltuialaRequest(
+            ProiectId: ProiectId,
+            Descriere: _model.Descriere,
+            Categorie: _model.Categorie,
+            ValoareFaraTva: _model.ValoareFaraTva,
+            ProcentTva: _model.ProcentTva,
+            Data: _model.Data ?? DateTime.UtcNow,
+            Status: status,
+            Subcategorie: _model.Subcategorie,
+            FurnizorId: _model.FurnizorId,
+            NumarFactura: _model.NumarFactura,
+            MetodaPlata: _model.MetodaPlata,
+            StatusPlata: _model.StatusPlata,
+            IncludeInBuget: _model.IncludeInBuget,
+            Observatii: _model.Observatii));
+
+        _seSalveaza = false;
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private async Task SalveazaEditare()
+    {
+        if (string.IsNullOrWhiteSpace(_model.Descriere) || CheltuialaDeEditat is null) return;
+
+        _seSalveaza = true;
+
+        await CheltuialaService.ActualizeazaCheltuialaAsync(new ActualizeazaCheltuialaRequest(
+            Id: CheltuialaDeEditat.Id,
+            Descriere: _model.Descriere,
+            Categorie: _model.Categorie,
+            ValoareFaraTva: _model.ValoareFaraTva,
+            ProcentTva: _model.ProcentTva,
+            Data: _model.Data ?? DateTime.UtcNow,
+            Subcategorie: _model.Subcategorie,
+            FurnizorId: _model.FurnizorId,
+            NumarFactura: _model.NumarFactura,
+            MetodaPlata: _model.MetodaPlata,
+            IncludeInBuget: _model.IncludeInBuget,
+            Observatii: _model.Observatii));
+
+        _seSalveaza = false;
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Anuleaza() => MudDialog.Cancel();
+
+    private static string FormateazaLei(decimal valoare) => $"{valoare:N2} lei";
+
+    private static string NumeCategorie(CategorieCheltuiala categorie) => categorie switch
+    {
+        CategorieCheltuiala.Materiale => "Materiale",
+        CategorieCheltuiala.Servicii => "Servicii",
+        CategorieCheltuiala.AlteCheltuieli => "Alte cheltuieli",
+        _ => categorie.ToString()
+    };
+
+    private class ModelCheltuiala
+    {
+        public string Descriere { get; set; } = string.Empty;
+        public CategorieCheltuiala Categorie { get; set; } = CategorieCheltuiala.Materiale;
+        public string? Subcategorie { get; set; }
+        public Guid? FurnizorId { get; set; }
+        public DateTime? Data { get; set; } = DateTime.Today;
+        public string? NumarFactura { get; set; }
+        public decimal ValoareFaraTva { get; set; }
+        public decimal ProcentTva { get; set; } = 19m;
+        public MetodaPlata? MetodaPlata { get; set; }
+        public StatusPlata StatusPlata { get; set; } = StatusPlata.InAsteptare;
+        public bool IncludeInBuget { get; set; } = true;
+        public string? Observatii { get; set; }
+    }
+}

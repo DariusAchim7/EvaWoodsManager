@@ -1,0 +1,19 @@
+<MudDialog>
+    <DialogContent>
+        <MudText>@Mesaj</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Anuleaza">@TextAnulare</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="Confirma">@TextConfirmare</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public string Mesaj { get; set; } = "Ești sigur?";
+    [Parameter] public string TextConfirmare { get; set; } = "Confirmă";
+    [Parameter] public string TextAnulare { get; set; } = "Anulează";
+
+    private void Confirma() => MudDialog.Close(DialogResult.Ok(true));
+    private void Anuleaza() => MudDialog.Cancel();
+}

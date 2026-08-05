@@ -1,0 +1,124 @@
+@using EvaWoods.Application.Materiale
+@using System.Text.Json
+@using System.Globalization
+@using System.Text
+
+<MudDialog>
+    <DialogContent>
+        @if (_foi.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">Niciun plan de tăiere disponibil. Recalculează materialele.</MudAlert>
+        }
+        else
+        {
+            <MudStack Spacing="4">
+                @foreach (var foaie in _foi)
+                {
+                    <div>
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-1">
+                            <MudText Typo="Typo.subtitle1">Foaia @foaie.Numar</MudText>
+                            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">@foaie.Plasari.Count piese</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="@(foaie.UtilizareProcent >= 75 ? Color.Success : Color.Warning)">
+                                    Utilizare: @($"{foaie.UtilizareProcent:0.#}%")
+                                </MudChip>
+                            </MudStack>
+                        </MudStack>
+
+                        <svg viewBox="@ViewBox" style="width: 100%; max-width: 900px; border: 2px solid var(--mud-palette-lines-default); border-radius: 4px; background-color: #faf9f5;"
+                             xmlns="http://www.w3.org/2000/svg">
+                            @((MarkupString)GenereazaSvgFoaie(foaie))
+                        </svg>
+                    </div>
+                }
+
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                    Simbolul ⟳ marchează piesele rotite cu 90°. Marginea de curățare (10 mm) și tăieturile (kerf) sunt incluse în calcul.
+                </MudText>
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudTooltip Text="În curând">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="true">Exportă plan</MudButton>
+        </MudTooltip>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Inchide">Închide</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public string? LayoutJson { get; set; }
+    [Parameter] public decimal LungimePlaca { get; set; }
+    [Parameter] public decimal LatimePlaca { get; set; }
+
+    private const decimal Margine = 10m;
+    private const decimal FontNume = 52m;
+    private const decimal FontDim = 44m;
+    private const decimal FontCote = 56m;
+
+    private List<FoaieRezultat> _foi = new();
+
+    private string ViewBox =>
+        string.Create(CultureInfo.InvariantCulture, $"-90 -70 {LungimePlaca + 130} {LatimePlaca + 110}");
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrWhiteSpace(LayoutJson))
+        {
+            try
+            {
+                _foi = JsonSerializer.Deserialize<List<FoaieRezultat>>(LayoutJson) ?? new List<FoaieRezultat>();
+            }
+            catch
+            {
+                _foi = new List<FoaieRezultat>();
+            }
+        }
+    }
+
+    private string GenereazaSvgFoaie(FoaieRezultat foaie)
+    {
+        var sb = new StringBuilder();
+
+        // Cotele plăcii
+        sb.Append($"<text x=\"{Inv(LungimePlaca / 2)}\" y=\"-12\" text-anchor=\"middle\" font-size=\"{Inv(FontCote)}\" fill=\"#888\">{Inv(LungimePlaca)} mm</text>");
+        sb.Append($"<text x=\"-12\" y=\"{Inv(LatimePlaca / 2)}\" text-anchor=\"middle\" font-size=\"{Inv(FontCote)}\" fill=\"#888\" transform=\"rotate(-90 -12 {Inv(LatimePlaca / 2)})\">{Inv(LatimePlaca)} mm</text>");
+
+        foreach (var piesa in foaie.Plasari)
+        {
+            var culoare = CuloarePiesa(piesa.PiesaId);
+            var x = Inv(piesa.X + Margine);
+            var y = Inv(piesa.Y + Margine);
+
+            sb.Append($"<rect x=\"{x}\" y=\"{y}\" width=\"{Inv(piesa.LungimeMm)}\" height=\"{Inv(piesa.LatimeMm)}\" fill=\"{culoare}\" stroke=\"#5a6e52\" stroke-width=\"{Inv(3m)}\" />");
+
+            if (piesa.LungimeMm > 250 && piesa.LatimeMm > 120)
+            {
+                var centruX = Inv(piesa.X + Margine + piesa.LungimeMm / 2);
+                var numeText = EscapeXml(piesa.Nume ?? "Piesă") + (piesa.Rotita ? " ⟳" : "");
+                var dimensiuniText = $"{Inv(piesa.LungimeMm)} × {Inv(piesa.LatimeMm)}";
+
+                sb.Append($"<text x=\"{centruX}\" y=\"{Inv(piesa.Y + Margine + piesa.LatimeMm / 2 - 20)}\" text-anchor=\"middle\" font-size=\"{Inv(FontNume)}\" fill=\"#333\">{numeText}</text>");
+                sb.Append($"<text x=\"{centruX}\" y=\"{Inv(piesa.Y + Margine + piesa.LatimeMm / 2 + 45)}\" text-anchor=\"middle\" font-size=\"{Inv(FontDim)}\" fill=\"#666\">{dimensiuniText}</text>");
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    private void Inchide() => MudDialog.Close(DialogResult.Ok(true));
+
+    private static string Inv(decimal valoare) => valoare.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static string EscapeXml(string text) =>
+        text.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
+
+    private static readonly string[] PaletaPiese =
+    {
+        "#dce8d4", "#e8dfd0", "#d4e0e8", "#e8d4d8", "#e0d4e8", "#d4e8e4", "#e8e4d0", "#dad4e8"
+    };
+
+    private string CuloarePiesa(Guid piesaId) =>
+        PaletaPiese[Math.Abs(piesaId.GetHashCode()) % PaletaPiese.Length];
+}

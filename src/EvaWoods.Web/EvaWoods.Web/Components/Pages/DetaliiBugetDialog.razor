@@ -1,0 +1,35 @@
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="2">
+            <div>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Buget alocat</MudText>
+                <MudText Typo="Typo.h6">@($"{BugetAlocat:N2} lei")</MudText>
+            </div>
+            <div>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Cheltuit</MudText>
+                <MudText Typo="Typo.h6">@($"{Cheltuit:N2} lei")</MudText>
+            </div>
+            <div>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Disponibil</MudText>
+                <MudText Typo="Typo.h6" Color="@(Disponibil >= 0 ? Color.Success : Color.Error)">@($"{Disponibil:N2} lei")</MudText>
+            </div>
+            <div>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">Procent consumat</MudText>
+                <MudText Typo="Typo.h6">@($"{Procent:0.#}%")</MudText>
+            </div>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Inchide">Închide</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public decimal BugetAlocat { get; set; }
+    [Parameter] public decimal Cheltuit { get; set; }
+    [Parameter] public decimal Disponibil { get; set; }
+    [Parameter] public decimal Procent { get; set; }
+
+    private void Inchide() => MudDialog.Close(DialogResult.Ok(true));
+}

@@ -1,0 +1,49 @@
+@using EvaWoods.Application.Cheltuieli
+@using EvaWoods.Domain.Cheltuieli
+
+<MudDialog>
+    <DialogContent>
+        @{
+            var confirmate = Cheltuieli.Where(c => c.Status == StatusCheltuiala.Confirmata).ToList();
+        }
+        @if (confirmate.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">Nicio cheltuială confirmată încă.</MudAlert>
+        }
+        else
+        {
+            @foreach (var grupCategorie in confirmate.GroupBy(c => c.Categorie))
+            {
+                <MudText Typo="Typo.subtitle1" Class="mt-2 mb-1">@NumeCategorie(grupCategorie.Key)</MudText>
+                @foreach (var subgrup in grupCategorie
+                    .GroupBy(c => string.IsNullOrWhiteSpace(c.Subcategorie) ? "Fără subcategorie" : c.Subcategorie!)
+                    .OrderByDescending(g => g.Sum(c => c.Total)))
+                {
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" Class="pl-2">
+                        <MudText Typo="Typo.body2">@subgrup.Key</MudText>
+                        <MudText Typo="Typo.body2">@($"{subgrup.Sum(c => c.Total):N2} lei")</MudText>
+                    </MudStack>
+                }
+                <MudDivider Class="my-2" />
+            }
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Inchide">Închide</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public List<CheltuialaDto> Cheltuieli { get; set; } = new();
+
+    private void Inchide() => MudDialog.Close(DialogResult.Ok(true));
+
+    private static string NumeCategorie(CategorieCheltuiala categorie) => categorie switch
+    {
+        CategorieCheltuiala.Materiale => "Materiale",
+        CategorieCheltuiala.Servicii => "Servicii",
+        CategorieCheltuiala.AlteCheltuieli => "Alte cheltuieli",
+        _ => categorie.ToString()
+    };
+}

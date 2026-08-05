@@ -1,0 +1,45 @@
+@using EvaWoods.Application.Proiecte
+@inject IProiectService ProiectService
+
+<MudDialog>
+    <DialogContent>
+        <MudNumericField @bind-Value="_avans" Label="Avans (%)" Min="0m" Max="100m" />
+        <MudNumericField @bind-Value="_termenExecutie" Label="Termen execuție (zile)" Min="0" Class="mt-3" />
+        <MudNumericField @bind-Value="_valabilitate" Label="Valabilitate ofertă (zile)" Min="0" Class="mt-3" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Anuleaza">Anulează</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Salveaza" Disabled="_seSalveaza">Salvează</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid ProiectId { get; set; }
+    [Parameter] public decimal? AvansActual { get; set; }
+    [Parameter] public int? TermenExecutieActual { get; set; }
+    [Parameter] public int? ValabilitateActuala { get; set; }
+
+    private decimal? _avans;
+    private int? _termenExecutie;
+    private int? _valabilitate;
+    private bool _seSalveaza;
+
+    protected override void OnInitialized()
+    {
+        _avans = AvansActual;
+        _termenExecutie = TermenExecutieActual;
+        _valabilitate = ValabilitateActuala;
+    }
+
+    private async Task Salveaza()
+    {
+        _seSalveaza = true;
+        await ProiectService.ActualizeazaSetariOfertaAsync(ProiectId, _avans, _termenExecutie, _valabilitate);
+        _seSalveaza = false;
+
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Anuleaza() => MudDialog.Cancel();
+}

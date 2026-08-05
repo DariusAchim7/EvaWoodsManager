@@ -1,0 +1,107 @@
+@using EvaWoods.Application.Clienti
+@using EvaWoods.Application.Proiecte
+@using EvaWoods.Domain.Proiecte
+@inject IProiectService ProiectService
+@inject IClientService ClientService
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model">
+            <MudSelect T="Guid" @bind-Value="_model.ClientId" Label="Client" Required="true" RequiredError="Selectează un client.">
+                @if (_clienti is not null)
+                {
+                    @foreach (var client in _clienti)
+                    {
+                        <MudSelectItem T="Guid" Value="client.Id">@client.Nume — @client.Localitate</MudSelectItem>
+                    }
+                }
+            </MudSelect>
+            <MudTextField @bind-Value="_model.Nume" Label="Nume proiect" Required="true" RequiredError="Numele este obligatoriu." Class="mt-3" />
+            <MudSelect T="TipPrincipalProiect?" @bind-Value="_model.TipPrincipal" Label="Tip principal" Clearable="true" Class="mt-3">
+                <MudSelectItem T="TipPrincipalProiect?" Value="TipPrincipalProiect.Bucatarie">Bucătărie</MudSelectItem>
+                <MudSelectItem T="TipPrincipalProiect?" Value="TipPrincipalProiect.Dressing">Dressing</MudSelectItem>
+                <MudSelectItem T="TipPrincipalProiect?" Value="TipPrincipalProiect.MobilierBaie">Mobilier baie</MudSelectItem>
+                <MudSelectItem T="TipPrincipalProiect?" Value="TipPrincipalProiect.Living">Living</MudSelectItem>
+                <MudSelectItem T="TipPrincipalProiect?" Value="TipPrincipalProiect.Dormitor">Dormitor</MudSelectItem>
+                <MudSelectItem T="TipPrincipalProiect?" Value="TipPrincipalProiect.Birou">Birou</MudSelectItem>
+                <MudSelectItem T="TipPrincipalProiect?" Value="TipPrincipalProiect.MobilierComercial">Mobilier comercial</MudSelectItem>
+                <MudSelectItem T="TipPrincipalProiect?" Value="TipPrincipalProiect.AltTip">Alt tip</MudSelectItem>
+            </MudSelect>
+            <MudTextField @bind-Value="_model.Subtip" Label="Subtip (opțional)" Class="mt-3" />
+            <MudTextField @bind-Value="_model.Descriere" Label="Descriere proiect" Lines="3" Class="mt-3" />
+            <MudNumericField @bind-Value="_model.Valoare" Label="Valoare (lei)" Required="true" Min="0m" Class="mt-3" />
+            <MudDatePicker @bind-Date="_model.TermenLimita" Label="Termen limită" Class="mt-3" />
+            <MudTextField @bind-Value="_model.AdresaMontaj" Label="Adresă montaj" Class="mt-3" />
+            <MudSelect T="StatusProiect" @bind-Value="_model.Status" Label="Status" Class="mt-3">
+                <MudSelectItem T="StatusProiect" Value="StatusProiect.OfertaTrimisa">Ofertă trimisă</MudSelectItem>
+                <MudSelectItem T="StatusProiect" Value="StatusProiect.Masuratori">Măsurători</MudSelectItem>
+                <MudSelectItem T="StatusProiect" Value="StatusProiect.Proiectare">Proiectare</MudSelectItem>
+                <MudSelectItem T="StatusProiect" Value="StatusProiect.InProductie">În producție</MudSelectItem>
+                <MudSelectItem T="StatusProiect" Value="StatusProiect.LaMontaj">La montaj</MudSelectItem>
+            </MudSelect>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Anuleaza">Anulează</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Salveaza" Disabled="_seSalveaza">
+            Salvează
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid? ClientIdImplicit { get; set; }
+
+    private MudForm _form = default!;
+    private bool _seSalveaza;
+    private List<ClientDto>? _clienti;
+    private readonly ModelAdaugareProiect _model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _clienti = (await ClientService.ObtineListaClientiAsync()).ToList();
+
+        if (ClientIdImplicit.HasValue)
+        {
+            _model.ClientId = ClientIdImplicit.Value;
+        }
+    }
+
+    private async Task Salveaza()
+    {
+        await _form.Validate();
+        if (!_form.IsValid) return;
+
+        _seSalveaza = true;
+
+        await ProiectService.CreeazaProiectAsync(new CreeazaProiectRequest(
+            ClientId: _model.ClientId,
+            Nume: _model.Nume,
+            Valoare: _model.Valoare,
+            Subtip: _model.Subtip,
+            TipPrincipal: _model.TipPrincipal,
+            Descriere: _model.Descriere,
+            TermenLimita: _model.TermenLimita,
+            Status: _model.Status,
+            AdresaMontaj: _model.AdresaMontaj));
+
+        _seSalveaza = false;
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Anuleaza() => MudDialog.Cancel();
+
+    private class ModelAdaugareProiect
+    {
+        public Guid ClientId { get; set; }
+        public string Nume { get; set; } = string.Empty;
+        public TipPrincipalProiect? TipPrincipal { get; set; }
+        public string? Subtip { get; set; }
+        public string? Descriere { get; set; }
+        public decimal Valoare { get; set; }
+        public DateTime? TermenLimita { get; set; }
+        public string? AdresaMontaj { get; set; }
+        public StatusProiect Status { get; set; } = StatusProiect.OfertaTrimisa;
+    }
+}

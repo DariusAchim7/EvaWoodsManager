@@ -1,0 +1,87 @@
+@using EvaWoods.Application.Proiecte
+@inject IProiectService ProiectService
+@inject IDialogService DialogService
+
+<MudDialog>
+    <DialogContent>
+        @if (_spatii is null)
+        {
+            <MudProgressCircular Indeterminate="true" />
+        }
+        else if (_spatii.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">Nicio cameră adăugată încă.</MudAlert>
+        }
+        else
+        {
+            <MudTable Items="@_spatii" Hover="true" Dense="true">
+                <HeaderContent>
+                    <MudTh>Cameră</MudTh>
+                    <MudTh>Suprafață</MudTh>
+                    <MudTh>Înălțime</MudTh>
+                    <MudTh>Orientare</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Cameră">@context.Nume</MudTd>
+                    <MudTd DataLabel="Suprafață">@AfiseazaSuprafata(context.Suprafata)</MudTd>
+                    <MudTd DataLabel="Înălțime">@AfiseazaInaltime(context.InaltimeMm)</MudTd>
+                    <MudTd DataLabel="Orientare">@(context.Orientare ?? "-")</MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                       OnClick="@(() => StergeSpatiu(context.Id))" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="DeschideDialogAdaugaSpatiu">
+            Adaugă spațiu
+        </MudButton>
+        <MudButton OnClick="Inchide">Închide</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid ProiectId { get; set; }
+
+    private List<SpatiuProiectDto>? _spatii;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await IncarcaSpatii();
+    }
+
+    private async Task IncarcaSpatii()
+    {
+        _spatii = (await ProiectService.ObtineSpatiiDupaProiectAsync(ProiectId)).ToList();
+    }
+
+    private async Task StergeSpatiu(Guid spatiuId)
+    {
+        await ProiectService.StergeSpatiuAsync(spatiuId);
+        await IncarcaSpatii();
+    }
+
+    private async Task DeschideDialogAdaugaSpatiu()
+    {
+        var parametri = new DialogParameters { ["ProiectId"] = ProiectId };
+        var dialog = await DialogService.ShowAsync<AdaugaSpatiuDialog>("Adaugă spațiu", parametri);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false })
+        {
+            await IncarcaSpatii();
+        }
+    }
+
+    private void Inchide() => MudDialog.Close(DialogResult.Ok(true));
+
+    private static string AfiseazaSuprafata(decimal? suprafata) =>
+        suprafata.HasValue ? $"{suprafata.Value:0.##} m²" : "-";
+
+    private static string AfiseazaInaltime(int? inaltimeMm) =>
+        inaltimeMm.HasValue ? $"{inaltimeMm.Value} mm" : "-";
+}

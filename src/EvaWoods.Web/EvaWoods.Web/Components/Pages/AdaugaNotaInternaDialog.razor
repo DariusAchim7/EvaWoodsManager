@@ -1,0 +1,51 @@
+@using EvaWoods.Application.Proiecte
+@inject IProiectService ProiectService
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField T="string" @bind-Value="_text" Label="Notă internă" Lines="4" Variant="Variant.Outlined"
+                      Placeholder="Observație internă, nevizibilă clientului..." />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Anuleaza">Anulează</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Salveaza" Disabled="_seSalveaza">Salvează</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid ProiectId { get; set; }
+    [Parameter] public NotaInternaDto? NotaDeEditat { get; set; }
+
+    private bool _seSalveaza;
+    private string _text = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        if (NotaDeEditat is not null)
+        {
+            _text = NotaDeEditat.Text;
+        }
+    }
+
+    private async Task Salveaza()
+    {
+        if (string.IsNullOrWhiteSpace(_text)) return;
+
+        _seSalveaza = true;
+
+        if (NotaDeEditat is not null)
+        {
+            await ProiectService.ActualizeazaNotaInternaAsync(new ActualizeazaNotaInternaRequest(NotaDeEditat.Id, _text));
+        }
+        else
+        {
+            await ProiectService.AdaugaNotaInternaAsync(new AdaugaNotaInternaRequest(ProiectId, _text));
+        }
+
+        _seSalveaza = false;
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Anuleaza() => MudDialog.Cancel();
+}

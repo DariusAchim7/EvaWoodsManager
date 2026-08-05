@@ -1,0 +1,2518 @@
+@page "/proiecte/{ProiectId:guid}"
+@using EvaWoods.Application.Proiecte
+@using EvaWoods.Domain.Proiecte
+@using Microsoft.AspNetCore.Components
+@using System.Globalization
+@using EvaWoods.Application.Cheltuieli
+@using EvaWoods.Domain.Cheltuieli
+@using EvaWoods.Application.Piese
+@using EvaWoods.Domain.Piese
+@using EvaWoods.Application.Materiale
+@using EvaWoods.Domain.Materiale
+@using EvaWoods.Application.Produse
+@using EvaWoods.Application.Oferte
+@using EvaWoods.Domain.Produse
+
+@inject IProiectService ProiectService
+@inject ICheltuialaService CheltuialaService
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+@inject IPiesaService PiesaService
+@inject ICalculMaterialService CalculMaterialService
+@inject IProdusService ProdusService
+@inject IOfertaService OfertaService
+
+
+<PageTitle>Detalii proiect</PageTitle>
+
+@if (_seIncarca)
+{
+    <MudProgressCircular Indeterminate="true" Class="my-8" />
+}
+else if (_proiect is null)
+{
+    <MudAlert Severity="Severity.Error">Proiectul nu a fost găsit.</MudAlert>
+}
+else
+{
+    <MudText Typo="Typo.h4" Class="mb-1">Detalii proiect</MudText>
+    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mb-3">
+        <MudLink Href="/proiecte" Typo="Typo.caption" Color="Color.Primary">Proiecte</MudLink>
+        <MudText Typo="Typo.caption" Class="mud-text-secondary">/</MudText>
+        <MudText Typo="Typo.caption" Class="mud-text-secondary">@_proiect.Nume</MudText>
+    </MudStack>
+
+    <MudGrid>
+        <MudItem xs="12" md="8">
+            <MudPaper Class="pa-3 mb-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2" Wrap="Wrap.Wrap" Class="mb-2">
+                    @if (_tabActiv == 3)
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                                OnClick="DeschideDialogAdaugaPiese">
+                            Adaugă piese în serie
+                        </MudButton>
+                        <MudTooltip Text="În curând">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.TableView" Disabled="true">
+                                Importă Excel
+                            </MudButton>
+                        </MudTooltip>
+                        <MudTooltip Text="În curând">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.PhotoCamera" Disabled="true">
+                                Importă din poză
+                            </MudButton>
+                        </MudTooltip>
+                    }
+                    else if (_tabActiv == 3)
+                    {
+                        <MudPaper Class="pa-4 mb-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                            <MudText Typo="Typo.subtitle1" Class="mb-2">Totaluri pe material</MudText>
+                            @if (!TotaluriPeMaterial.Any())
+                            {
+                                <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio piesă adăugată încă.</MudText>
+                            }
+                            else
+                            {
+                                <MudStack Spacing="1">
+                                    @foreach (var total in TotaluriPeMaterial)
+                                    {
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                            <MudText Typo="Typo.body2">@total.Nume</MudText>
+                                            <MudText Typo="Typo.body2" Class="font-weight-medium">@($"{total.Valoare:0.##} m²")</MudText>
+                                        </MudStack>
+                                    }
+                                    <MudDivider Class="my-1" />
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                        <MudText Typo="Typo.subtitle2">Total suprafață</MudText>
+                                        <MudText Typo="Typo.subtitle2">@($"{SuprafataTotala:0.##} m²")</MudText>
+                                    </MudStack>
+                                </MudStack>
+                            }
+                        </MudPaper>
+
+                        <MudPaper Class="pa-4 mb-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                            <MudText Typo="Typo.subtitle1" Class="mb-2">Totaluri pe cant</MudText>
+                            @if (!TotaluriPeCant.Any())
+                            {
+                                <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio piesă cu cant încă.</MudText>
+                            }
+                            else
+                            {
+                                <MudStack Spacing="1">
+                                    @foreach (var total in TotaluriPeCant)
+                                    {
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                            <MudText Typo="Typo.body2">@total.Nume</MudText>
+                                            <MudText Typo="Typo.body2" Class="font-weight-medium">@($"{total.Valoare:0.##} ml")</MudText>
+                                        </MudStack>
+                                    }
+                                    <MudDivider Class="my-1" />
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                        <MudText Typo="Typo.subtitle2">Total cant</MudText>
+                                        <MudText Typo="Typo.subtitle2">@($"{CantTotal:0.##} ml")</MudText>
+                                    </MudStack>
+                                </MudStack>
+                            }
+                        </MudPaper>
+
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            Piesele sunt introduse manual și sunt folosite pentru calculele de PAL/PFL și cant.
+                        </MudAlert>
+                    }
+                    else if (_tabActiv == 4)
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                                OnClick="RecalculeazaMateriale" Disabled="_seRecalculeaza">
+                            Recalculează materialele
+                        </MudButton>
+                        <MudTooltip Text="În curând">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Settings" Disabled="true">
+                                Setări calcul
+                            </MudButton>
+                        </MudTooltip>
+                        <MudTooltip Text="În curând">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.FileDownload" Disabled="true">
+                                Exportă
+                            </MudButton>
+                        </MudTooltip>
+                        <MudTooltip Text="Disponibil odată cu tab-ul Ofertă">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Send" Disabled="true">
+                                Trimite în Calcul preț
+                            </MudButton>
+                        </MudTooltip>
+                    }
+                    else if (_tabActiv == 6)
+                    {
+                        <MudPaper Class="pa-4 mb-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                            <MudText Typo="Typo.subtitle1" Class="mb-2">Rezumat ofertă</MudText>
+                            <MudStack Spacing="1">
+                                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Cost produse (fără manoperă)</MudText>
+                                    <MudText Typo="Typo.body2">@($"{_rezumatOferta?.CostProduseFaraManopera ?? 0:N2} lei")</MudText>
+                                </MudStack>
+                                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Cost total</MudText>
+                                    <MudText Typo="Typo.body2">@($"{_rezumatOferta?.CostTotal ?? 0:N2} lei")</MudText>
+                                </MudStack>
+                                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Preț de vânzare</MudText>
+                                    <MudText Typo="Typo.body2">@($"{_rezumatOferta?.PretVanzareTotal ?? 0:N2} lei")</MudText>
+                                </MudStack>
+                                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Profit estimat</MudText>
+                                    <MudText Typo="Typo.body2" Style="color: var(--mud-palette-success);">@($"{_rezumatOferta?.ProfitEstimat ?? 0:N2} lei")</MudText>
+                                </MudStack>
+                                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.subtitle2">Marjă</MudText>
+                                    <MudText Typo="Typo.subtitle2">@($"{_rezumatOferta?.MarjaProcent ?? 0:0.#}%")</MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudPaper>
+
+                        <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                            <MudText Typo="Typo.subtitle1" Class="mb-2">Setări ofertă</MudText>
+                            <MudStack Spacing="1" Class="mb-3">
+                                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Avans</MudText>
+                                    <MudText Typo="Typo.body2">@(_proiect?.AvansProcent.HasValue == true ? $"{_proiect.AvansProcent}%" : "-")</MudText>
+                                </MudStack>
+                                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Termen execuție</MudText>
+                                    <MudText Typo="Typo.body2">@(_proiect?.TermenExecutieZile.HasValue == true ? $"{_proiect.TermenExecutieZile} zile" : "-")</MudText>
+                                </MudStack>
+                                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Valabilitate ofertă</MudText>
+                                    <MudText Typo="Typo.body2">@(_proiect?.ValabilitateOfertaZile.HasValue == true ? $"{_proiect.ValabilitateOfertaZile} zile" : "-")</MudText>
+                                </MudStack>
+                            </MudStack>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" StartIcon="@Icons.Material.Outlined.Edit"
+                                    OnClick="DeschideDialogEditeazaSetariOferta">
+                                Editează setări
+                            </MudButton>
+                        </MudPaper>
+                    }
+                    else if (_tabActiv == 7)
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                                OnClick="DeschideDialogAdaugaCheltuiala">
+                            Adaugă cheltuială
+                        </MudButton>
+                        <MudTooltip Text="În curând">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.DocumentScanner" Disabled="true">
+                                Scanează factură
+                            </MudButton>
+                        </MudTooltip>
+                        <MudMenu>
+                            <ActivatorContent>
+                                <MudButton Variant="Variant.Outlined" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowDropDown">
+                                    Export
+                                </MudButton>
+                            </ActivatorContent>
+                            <ChildContent>
+                                <MudMenuItem Disabled="true">Export Excel (în curând)</MudMenuItem>
+                                <MudMenuItem Disabled="true">Export PDF (în curând)</MudMenuItem>
+                                <MudMenuItem Disabled="true">Export CSV (în curând)</MudMenuItem>
+                                <MudMenuItem Disabled="true">Raport cheltuieli proiect (în curând)</MudMenuItem>
+                                <MudMenuItem Disabled="true">Raport pentru contabilitate (în curând)</MudMenuItem>
+                            </ChildContent>
+                        </MudMenu>
+                    }
+                    else
+                    {
+                        <MudTooltip Text="În curând">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Disabled="true">
+                                Adaugă corp
+                            </MudButton>
+                        </MudTooltip>
+                        <MudTooltip Text="În curând">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Description" Disabled="true">
+                                Generează ofertă
+                            </MudButton>
+                        </MudTooltip>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit"
+                                OnClick="DeschideDialogEditeazaProiect">
+                            Editează proiect
+                        </MudButton>
+                        <MudMenu Icon="@Icons.Material.Filled.MoreVert">
+                            <MudMenuItem Disabled="true">Șterge proiect (în curând)</MudMenuItem>
+                        </MudMenu>
+                    }
+                </MudStack>
+
+                <MudGrid>
+                    <MudItem xs="12" md="3">
+                        <MudPaper Class="d-flex flex-column align-center justify-center pa-2" Elevation="0"
+                                  Style="width: 260px; max-width: 100%; height: 150px; background-color: #f0efe9; border: 1px dashed var(--mud-palette-lines-default); border-radius: 8px;">
+                            <MudIcon Icon="@Icons.Material.Outlined.Image" Size="Size.Medium" Class="mud-text-secondary mb-1" />
+                            <MudText Typo="Typo.body2" Class="font-weight-medium" Align="Align.Center">Adaugă imagine proiect</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">JPG sau PNG</MudText>
+                            <MudTooltip Text="În curând">
+                                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" Disabled="true" Class="mt-1">
+                                    Încarcă imagine
+                                </MudButton>
+                            </MudTooltip>
+                        </MudPaper>
+                    </MudItem>
+
+                    <MudItem xs="12" md="5">
+                        <MudText Typo="Typo.h5" Class="mb-2">@_proiect.Nume</MudText>
+                        <MudStack Spacing="1">
+                            <div>
+                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="@Icons.Material.Outlined.Person" Size="Size.Small" Class="mud-text-secondary" />
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Client</MudText>
+                                </MudStack>
+                                <MudLink Href="@($"/clienti/{_proiect.ClientId}")" Underline="Underline.Hover">
+                                    <MudText Typo="Typo.body1">@_proiect.ClientNume</MudText>
+                                </MudLink>
+                            </div>
+                            <div>
+                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                    <MudIcon Icon="@Icons.Material.Outlined.Tag" Size="Size.Small" Class="mud-text-secondary" />
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Cod proiect</MudText>
+                                </MudStack>
+                                <MudText Typo="Typo.body1">@_proiect.CodProiect</MudText>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(_proiect.AdresaMontaj))
+                            {
+                                <div>
+                                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                        <MudIcon Icon="@Icons.Material.Outlined.LocationOn" Size="Size.Small" Class="mud-text-secondary" />
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Adresă</MudText>
+                                    </MudStack>
+                                    <MudText Typo="Typo.body1">@_proiect.AdresaMontaj</MudText>
+                                </div>
+                            }
+                        </MudStack>
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <MudStack Spacing="1">
+                            <MudPaper Class="pa-2" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); border-radius: 8px;">
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Status</MudText>
+                                <div>
+                                    <MudChip T="string" Color="@CuloareStatus(_proiect.Status)" Size="Size.Small"
+                                             OnClick="DeschideDialogSchimbaStatus" Style="cursor: pointer;">
+                                        @NumeStatus(_proiect.Status)
+                                    </MudChip>
+                                </div>
+                            </MudPaper>
+                            <MudPaper Class="pa-2" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); border-radius: 8px;">
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Valoare totală</MudText>
+                                <MudText Typo="Typo.subtitle1">@FormateazaLei(_proiect.Valoare)</MudText>
+                            </MudPaper>
+                            <MudPaper Class="pa-2" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); border-radius: 8px;">
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Progres (@(_proiect.Progres)%)</MudText>
+                                <MudProgressLinear Color="Color.Success" Value="@_proiect.Progres" Class="mt-1" Rounded="true" />
+                            </MudPaper>
+                        </MudStack>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+
+            <MudTabs Elevation="0" Rounded="true" PanelClass="pa-4" @bind-ActivePanelIndex="_tabActiv">
+                <MudTabPanel Text="Informații">
+                    <MudGrid Class="mt-2">
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mb-2">
+                                    <MudIcon Icon="@Icons.Material.Outlined.Description" Color="Color.Primary" Size="Size.Small" />
+                                    <MudText Typo="Typo.subtitle1">Descriere proiect</MudText>
+                                </MudStack>
+                                @if (!string.IsNullOrWhiteSpace(_proiect.Descriere))
+                                {
+                                    <MudText Typo="Typo.body2">@_proiect.Descriere</MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio descriere adăugată încă.</MudText>
+                                }
+                            </MudPaper>
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mb-2">
+                                    <MudIcon Icon="@Icons.Material.Outlined.Person" Color="Color.Primary" Size="Size.Small" />
+                                    <MudText Typo="Typo.subtitle1">Detalii client</MudText>
+                                </MudStack>
+                                <MudLink Href="@($"/clienti/{_proiect.ClientId}")" Underline="Underline.Hover">
+                                    <MudText Typo="Typo.body1">@_proiect.ClientNume</MudText>
+                                </MudLink>
+                                <MudText Typo="Typo.body2" Class="mud-text-secondary">@_proiect.ClientTelefon</MudText>
+                                @if (!string.IsNullOrWhiteSpace(_proiect.ClientEmail))
+                                {
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">@_proiect.ClientEmail</MudText>
+                                }
+                                <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">@_proiect.ClientLocalitate</MudText>
+                                <MudStack Row="true" Spacing="1">
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Call" Color="Color.Primary" Variant="Variant.Outlined"
+                                                   Size="Size.Small" Href="@($"tel:{_proiect.ClientTelefon}")" />
+                                    @if (!string.IsNullOrWhiteSpace(_proiect.ClientEmail))
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Outlined.Email" Color="Color.Primary" Variant="Variant.Outlined"
+                                                       Size="Size.Small" Href="@($"mailto:{_proiect.ClientEmail}")" />
+                                    }
+                                    <MudIconButton Icon="@Icons.Material.Outlined.LocationOn" Color="Color.Primary" Variant="Variant.Outlined"
+                                                   Size="Size.Small" Href="@LinkHartaClient" Target="_blank" />
+                                </MudStack>
+                            </MudPaper>
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mb-2">
+                                    <MudIcon Icon="@Icons.Material.Outlined.Category" Color="Color.Primary" Size="Size.Small" />
+                                    <MudText Typo="Typo.subtitle1">Tip proiect</MudText>
+                                </MudStack>
+                                @if (_proiect.TipPrincipal.HasValue)
+                                {
+                                    <MudText Typo="Typo.body2"><b>Tip:</b> @NumeTipPrincipal(_proiect.TipPrincipal.Value)</MudText>
+                                    @if (!string.IsNullOrWhiteSpace(_proiect.Subtip))
+                                    {
+                                        <MudText Typo="Typo.body2"><b>Subtip:</b> @_proiect.Subtip</MudText>
+                                    }
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Tip proiect nesetat.</MudText>
+                                }
+                            </MudPaper>
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mb-2">
+                                    <MudIcon Icon="@Icons.Material.Outlined.Event" Color="Color.Primary" Size="Size.Small" />
+                                    <MudText Typo="Typo.subtitle1">Termen limită</MudText>
+                                </MudStack>
+                                @if (_proiect.TermenLimita.HasValue)
+                                {
+                                    var infoTermen = InfoTermenLimita();
+                                    <MudText Typo="Typo.h6" Class="mb-1">@FormateazaDataLunga(_proiect.TermenLimita.Value)</MudText>
+                                    <MudChip T="string" Color="@infoTermen.Culoare" Size="Size.Small">@infoTermen.Text</MudChip>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Fără termen limită setat.</MudText>
+                                }
+                            </MudPaper>
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                        <MudIcon Icon="@Icons.Material.Outlined.Chat" Color="Color.Primary" Size="Size.Small" />
+                                        <MudText Typo="Typo.subtitle1">Observații client</MudText>
+                                    </MudStack>
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" OnClick="DeschideDialogObservatiiClient" />
+                                </MudStack>
+                                @if (!string.IsNullOrWhiteSpace(_proiect.ObservatiiClient))
+                                {
+                                    <MudText Typo="Typo.body2">@_proiect.ObservatiiClient</MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio observație adăugată încă.</MudText>
+                                }
+                            </MudPaper>
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                        <MudIcon Icon="@Icons.Material.Outlined.LocalShipping" Color="Color.Primary" Size="Size.Small" />
+                                        <MudText Typo="Typo.subtitle1">Date montaj</MudText>
+                                    </MudStack>
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" OnClick="DeschideDialogDateMontaj" />
+                                </MudStack>
+                                @if (!string.IsNullOrWhiteSpace(_proiect.AdresaMontaj))
+                                {
+                                    <MudText Typo="Typo.body2"><b>Adresă:</b> @_proiect.AdresaMontaj</MudText>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(_proiect.Etaj))
+                                {
+                                    <MudText Typo="Typo.body2"><b>Etaj:</b> @_proiect.Etaj</MudText>
+                                }
+                                @if (_proiect.AreLift.HasValue)
+                                {
+                                    <MudText Typo="Typo.body2"><b>Lift:</b> @(_proiect.AreLift.Value ? "Da" : "Nu")</MudText>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(_proiect.AccesAuto))
+                                {
+                                    <MudText Typo="Typo.body2"><b>Acces:</b> @_proiect.AccesAuto</MudText>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(_proiect.LocParcare))
+                                {
+                                    <MudText Typo="Typo.body2"><b>Parcare:</b> @_proiect.LocParcare</MudText>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(_proiect.PersoanaContactMontaj))
+                                {
+                                    <MudText Typo="Typo.body2"><b>Contact:</b> @_proiect.PersoanaContactMontaj</MudText>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(_proiect.IntervalOrarPreferat))
+                                {
+                                    <MudText Typo="Typo.body2"><b>Interval orar:</b> @_proiect.IntervalOrarPreferat</MudText>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(_proiect.ObservatiiTransport))
+                                {
+                                    <MudText Typo="Typo.body2"><b>Transport:</b> @_proiect.ObservatiiTransport</MudText>
+                                }
+                                @if (AreDateMontajGoale())
+                                {
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio informație de montaj adăugată încă.</MudText>
+                                }
+                            </MudPaper>
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                        <MudIcon Icon="@Icons.Material.Outlined.MeetingRoom" Color="Color.Primary" Size="Size.Small" />
+                                        <MudText Typo="Typo.subtitle1">Cameră / Spațiu</MudText>
+                                    </MudStack>
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Add" Size="Size.Small" OnClick="DeschideDialogAdaugaSpatiu" />
+                                </MudStack>
+
+                                @if (_spatii is { Count: 0 })
+                                {
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio cameră adăugată încă.</MudText>
+                                }
+                                else if (_spatii is { Count: 1 })
+                                {
+                                    var spatiu = _spatii[0];
+                                    <MudText Typo="Typo.body2"><b>Cameră:</b> @spatiu.Nume</MudText>
+                                    @if (spatiu.Suprafata.HasValue)
+                                    {
+                                        <MudText Typo="Typo.body2"><b>Suprafață:</b> @FormateazaSuprafata(spatiu.Suprafata.Value)</MudText>
+                                    }
+                                    @if (spatiu.InaltimeMm.HasValue)
+                                    {
+                                        <MudText Typo="Typo.body2"><b>Înălțime:</b> @(spatiu.InaltimeMm.Value) mm</MudText>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(spatiu.Orientare))
+                                    {
+                                        <MudText Typo="Typo.body2"><b>Orientare:</b> @spatiu.Orientare</MudText>
+                                    }
+                                }
+                                else if (_spatii is { Count: > 1 })
+                                {
+                                    <MudText Typo="Typo.body2" Class="mb-2">@_spatii.Count camere adăugate</MudText>
+                                    <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="DeschideDialogToateSpatiile">
+                                        Vezi toate spațiile
+                                    </MudButton>
+                                }
+                            </MudPaper>
+                        </MudItem>
+
+                        <MudItem xs="12" md="6">
+                            <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mb-2">
+                                    <MudIcon Icon="@Icons.Material.Outlined.History" Color="Color.Primary" Size="Size.Small" />
+                                    <MudText Typo="Typo.subtitle1">Istoricul statusului</MudText>
+                                </MudStack>
+                                @if (_istoricStatus is { Count: 0 })
+                                {
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio schimbare de status înregistrată încă.</MudText>
+                                }
+                                else
+                                {
+                                    <MudStack Spacing="2">
+                                        @foreach (var intrare in _istoricStatus.OrderBy(i => i.DataSchimbare))
+                                        {
+                                            <div>
+                                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                                    <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                                                    <MudText Typo="Typo.body2" Class="font-weight-medium">@NumeStatus(intrare.StatusNou)</MudText>
+                                                </MudStack>
+                                                <MudText Typo="Typo.caption" Class="mud-text-secondary" Style="margin-left: 28px;">
+                                                    @FormateazaDataOra(intrare.DataSchimbare) — @(intrare.Utilizator ?? "Sistem")
+                                                </MudText>
+                                                @if (!string.IsNullOrWhiteSpace(intrare.Observatie))
+                                                {
+                                                    <MudText Typo="Typo.caption" Style="margin-left: 28px;">@intrare.Observatie</MudText>
+                                                }
+                                            </div>
+                                        }
+                                    </MudStack>
+                                }
+                            </MudPaper>
+                        </MudItem>
+
+                        <MudItem xs="12" md="6">
+                            <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                        <MudIcon Icon="@Icons.Material.Outlined.StickyNote2" Color="Color.Primary" Size="Size.Small" />
+                                        <MudText Typo="Typo.subtitle1">Note interne</MudText>
+                                    </MudStack>
+                                    <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Add"
+                                               OnClick="DeschideDialogAdaugaNotaInterna">
+                                        Adaugă notă
+                                    </MudButton>
+                                </MudStack>
+
+                                @if (_noteInterne is { Count: 0 })
+                                {
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio notă internă adăugată încă.</MudText>
+                                }
+                                else
+                                {
+                                    <MudStack Spacing="2">
+                                        @foreach (var nota in _noteInterne)
+                                        {
+                                            <MudPaper Class="pa-2" Elevation="0" Style="@StilNota(nota)">
+                                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                                                    <MudText Typo="Typo.body2" Style="@(nota.EsteRezolvata ? "text-decoration: line-through;" : "")">
+                                                        @nota.Text
+                                                    </MudText>
+                                                    <MudStack Row="true" Spacing="0">
+                                                        <MudIconButton Icon="@(nota.EsteFixata ? Icons.Material.Filled.PushPin : Icons.Material.Outlined.PushPin)"
+                                                                       Size="Size.Small" Color="@(nota.EsteFixata ? Color.Warning : Color.Default)"
+                                                                       OnClick="@(() => ComutaFixareNota(nota.Id))" />
+                                                        <MudIconButton Icon="@(nota.EsteRezolvata ? Icons.Material.Filled.CheckCircle : Icons.Material.Outlined.CheckCircleOutline)"
+                                                                       Size="Size.Small" Color="@(nota.EsteRezolvata ? Color.Success : Color.Default)"
+                                                                       OnClick="@(() => ComutaRezolvareNota(nota.Id))" />
+                                                        <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small"
+                                                                       OnClick="@(() => DeschideDialogEditeazaNotaInterna(nota))" />
+                                                    </MudStack>
+                                                </MudStack>
+                                                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                                    @(nota.Autor ?? "Sistem") — @FormateazaDataOra(nota.DataModificare ?? nota.DataCreare)
+                                                </MudText>
+                                            </MudPaper>
+                                        }
+                                    </MudStack>
+                                }
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+                <MudTabPanel Text="Măsurători"><MudAlert Severity="Severity.Info">Modul în construcție.</MudAlert></MudTabPanel>
+                <MudTabPanel Text="Corpuri"><MudAlert Severity="Severity.Info">Modul în construcție.</MudAlert></MudTabPanel>
+                <MudTabPanel Text="Piese">
+                    <div class="mt-4">
+                        <MudGrid Class="mb-4">
+                            <MudItem xs="6" sm="4" md="2">
+                                <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Tipuri de piese</MudText>
+                                    <MudText Typo="Typo.h5" Class="font-weight-bold">@(_piese?.Count ?? 0)</MudText>
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="6" sm="4" md="2">
+                                <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Bucăți totale</MudText>
+                                    <MudText Typo="Typo.h5" Class="font-weight-bold">@BucatiTotale</MudText>
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="6" sm="4" md="2">
+                                <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Suprafață totală</MudText>
+                                    <MudText Typo="Typo.h5" Class="font-weight-bold">@($"{SuprafataTotala:0.##} m²")</MudText>
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="6" sm="4" md="2">
+                                <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Cant total</MudText>
+                                    <MudText Typo="Typo.h5" Class="font-weight-bold">@($"{CantTotal:0.##} ml")</MudText>
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="6" sm="4" md="2">
+                                <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Piese neasociate</MudText>
+                                    <MudText Typo="Typo.h5" Class="font-weight-bold" Style="@(PieseNeasociate > 0 ? "color: var(--mud-palette-warning);" : "")">@PieseNeasociate</MudText>
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="6" sm="4" md="2">
+                                <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Piese fără material</MudText>
+                                    <MudText Typo="Typo.h5" Class="font-weight-bold" Style="@(PieseFaraMaterial > 0 ? "color: var(--mud-palette-error);" : "")">@PieseFaraMaterial</MudText>
+                                </MudPaper>
+                            </MudItem>
+                        </MudGrid>
+
+                        @if (_piese is { Count: 0 })
+                        {
+                            <MudAlert Severity="Severity.Info">Nicio piesă adăugată încă. Folosește „Adaugă piese în serie" din partea de sus.</MudAlert>
+                        }
+                        else if (_piese is not null)
+                        {
+                            <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                                    <MudText Typo="Typo.h6">Piese proiect</MudText>
+                                    <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Merge"
+                                            OnClick="CombinaDuplicatele">
+                                        Combină duplicatele
+                                    </MudButton>
+                                </MudStack>
+                                <MudTable Items="@_piese" Hover="true" Dense="true">
+                                    <HeaderContent>
+                                        <MudTh>Denumire</MudTh>
+                                        <MudTh>Dimensiuni</MudTh>
+                                        <MudTh>Bucăți</MudTh>
+                                        <MudTh>Corp</MudTh>
+                                        <MudTh>Material</MudTh>
+                                        <MudTh>Cant lungi</MudTh>
+                                        <MudTh>Cant scurte</MudTh>
+                                        <MudTh>Total cant</MudTh>
+                                        <MudTh>Fibră</MudTh>
+                                        <MudTh></MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd DataLabel="Denumire">@(context.Nume ?? "-")</MudTd>
+                                        <MudTd DataLabel="Dimensiuni">@($"{context.LungimeMm:0.#} × {context.LatimeMm:0.#} mm")</MudTd>
+                                        <MudTd DataLabel="Bucăți">@context.Cantitate</MudTd>
+                                        <MudTd DataLabel="Corp">@(context.CorpNume ?? "-")</MudTd>
+                                        <MudTd DataLabel="Material">
+                                            @if (context.MaterialNume is not null)
+                                            {
+                                                @context.MaterialNume
+                                            }
+                                            else
+                                            {
+                                                <MudChip T="string" Size="Size.Small" Color="Color.Error">Fără material</MudChip>
+                                            }
+                                        </MudTd>
+                                        <MudTd DataLabel="Cant lungi">@context.CantLaturiLungi</MudTd>
+                                        <MudTd DataLabel="Cant scurte">@context.CantLaturiScurte</MudTd>
+                                        <MudTd DataLabel="Total cant">@(context.TotalCantMl > 0 ? $"{context.TotalCantMl:0.##} ml" : "-")</MudTd>
+                                        <MudTd DataLabel="Fibră">@NumeFibra(context.DirectieFibra)</MudTd>
+                                        <MudTd>
+                                            <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small">
+                                                <MudMenuItem OnClick="@(() => DeschideDialogEditeazaPiesa(context))">Editează</MudMenuItem>
+                                                <MudMenuItem OnClick="@(() => DuplicaPiesa(context.Id))">Duplică</MudMenuItem>
+                                                <MudMenuItem OnClick="@(() => StergePiesa(context.Id))">Șterge</MudMenuItem>
+                                            </MudMenu>
+                                        </MudTd>
+                                    </RowTemplate>
+                                    <PagerContent>
+                                        <MudTablePager PageSizeOptions="new int[] { 10, 25, 50 }" />
+                                    </PagerContent>
+                                </MudTable>
+                            </MudPaper>
+                        }
+                    </div>
+                </MudTabPanel>
+                <MudTabPanel Text="Materiale">
+                    <div class="mt-4">
+                        @if (_piese is { Count: 0 })
+                        {
+                            <MudAlert Severity="Severity.Info">
+                                Nu există piese pentru calculul materialelor. Adaugă piese în tab-ul „Piese" pentru a calcula necesarul de PAL, MDF, PFL și cant.
+                            </MudAlert>
+                        }
+                        else
+                        {
+                            <MudGrid Class="mb-4">
+                                <MudItem xs="6" sm="4" md="2">
+                                    <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Materiale distincte</MudText>
+                                        <MudText Typo="Typo.h5" Class="font-weight-bold">@(_calcule?.Count ?? 0)</MudText>
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">tipuri de materiale</MudText>
+                                    </MudPaper>
+                                </MudItem>
+                                <MudItem xs="6" sm="4" md="2">
+                                    <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Suprafață totală piese</MudText>
+                                        <MudText Typo="Typo.h5" Class="font-weight-bold">@($"{SuprafataTotala:0.##} m²")</MudText>
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">suprafață geometrică</MudText>
+                                    </MudPaper>
+                                </MudItem>
+                                <MudItem xs="6" sm="4" md="2">
+                                    <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Foi estimate</MudText>
+                                        <MudText Typo="Typo.h5" Class="font-weight-bold">@TotalFoiEstimate</MudText>
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">după optimizare</MudText>
+                                    </MudPaper>
+                                </MudItem>
+                                <MudItem xs="6" sm="4" md="2">
+                                    <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Cant total</MudText>
+                                        <MudText Typo="Typo.h5" Class="font-weight-bold">@($"{CantTotal:0.##} ml")</MudText>
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">toate canturile</MudText>
+                                    </MudPaper>
+                                </MudItem>
+                                <MudItem xs="6" sm="4" md="2">
+                                    <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Pierdere estimată</MudText>
+                                        <MudText Typo="Typo.h5" Class="font-weight-bold">@(PierdereMedie.HasValue ? $"{PierdereMedie.Value:0.#}%" : "-")</MudText>
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">din material</MudText>
+                                    </MudPaper>
+                                </MudItem>
+                                <MudItem xs="6" sm="4" md="2">
+                                    <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Probleme</MudText>
+                                        <MudText Typo="Typo.h5" Class="font-weight-bold" Style="@(NumarProbleme > 0 ? "color: var(--mud-palette-warning);" : "")">@NumarProbleme</MudText>
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">necesită atenție</MudText>
+                                    </MudPaper>
+                                </MudItem>
+                            </MudGrid>
+
+                            @if (_calcule is { Count: 0 })
+                            {
+                                <MudAlert Severity="Severity.Info" Class="mb-4">
+                                    Niciun calcul de materiale încă. Apasă „Recalculează materialele" din partea de sus.
+                                </MudAlert>
+                            }
+                            else if (_calcule is not null)
+                            {
+                                <MudPaper Class="pa-4 mb-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                                    <MudText Typo="Typo.h6" Class="mb-3">Materiale pe plăci</MudText>
+                                    <MudTable Items="@_calcule" Hover="true" Dense="true" T="CalculMaterialDto" OnRowClick="@(args => DeschideDialogPlanTaiere(args.Item))" RowStyle="cursor: pointer;">
+                                        <HeaderContent>
+                                            <MudTh>Material</MudTh>
+                                            <MudTh>Grosime</MudTh>
+                                            <MudTh>Dimensiune placă</MudTh>
+                                            <MudTh>Tipuri piese</MudTh>
+                                            <MudTh>Bucăți</MudTh>
+                                            <MudTh>Suprafață piese</MudTh>
+                                            <MudTh>Foi teoretice</MudTh>
+                                            <MudTh>Foi estimate</MudTh>
+                                            <MudTh>Utilizare</MudTh>
+                                            <MudTh>Pierdere</MudTh>
+                                            <MudTh>Status</MudTh>
+                                        </HeaderContent>
+                                        <RowTemplate>
+                                            <MudTd DataLabel="Material">@context.MaterialNume</MudTd>
+                                            <MudTd DataLabel="Grosime">@(context.GrosimeMm.HasValue ? $"{context.GrosimeMm:0.#} mm" : "-")</MudTd>
+                                            <MudTd DataLabel="Dimensiune placă">
+                                                @(context.LungimeFoaieMm.HasValue && context.LatimeFoaieMm.HasValue
+                                                    ? $"{context.LungimeFoaieMm:0} × {context.LatimeFoaieMm:0} mm"
+                                                    : "-")
+                                            </MudTd>
+                                            <MudTd DataLabel="Tipuri piese">@context.NumarTipuriPiese</MudTd>
+                                            <MudTd DataLabel="Bucăți">@context.NumarBucati</MudTd>
+                                            <MudTd DataLabel="Suprafață piese">@($"{context.SuprafataPieseM2:0.##} m²")</MudTd>
+                                            <MudTd DataLabel="Foi teoretice">@($"{context.FoiTeoretice:0.##}")</MudTd>
+                                            <MudTd DataLabel="Foi estimate"><b>@context.FoiEstimate</b></MudTd>
+                                            <MudTd DataLabel="Utilizare">
+                                                @if (context.UtilizareProcent > 0)
+                                                {
+                                                    <MudStack Spacing="0" Style="min-width: 80px;">
+                                                        <MudText Typo="Typo.caption">@($"{context.UtilizareProcent:0.#}%")</MudText>
+                                                        <MudProgressLinear Color="Color.Success" Value="@((double)context.UtilizareProcent)" Rounded="true" />
+                                                    </MudStack>
+                                                }
+                                                else
+                                                {
+                                                    @("-")
+                                                }
+                                            </MudTd>
+                                            <MudTd DataLabel="Pierdere">
+                                                @if (context.UtilizareProcent > 0)
+                                                {
+                                                    <MudText Typo="Typo.caption" Style="@(context.PierdereProcent > 25 ? "color: var(--mud-palette-error);" : "color: var(--mud-palette-warning);")">
+                                                        @($"{context.PierdereProcent:0.#}%")
+                                                    </MudText>
+                                                }
+                                                else
+                                                {
+                                                    @("-")
+                                                }
+                                            </MudTd>
+                                            <MudTd DataLabel="Status">
+                                                <MudChip T="string" Size="Size.Small" Color="@CuloareStatusCalcul(context.Status)">
+                                                    @NumeStatusCalcul(context.Status)
+                                                </MudChip>
+                                            </MudTd>
+                                        </RowTemplate>
+                                    </MudTable>
+                                    @if (_calcule.Any())
+                                    {
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary mt-2">
+                                            Ultima recalculare: @FormateazaDataOra(_calcule.Max(c => c.DataCalcul))
+                                        </MudText>
+                                    }
+                                </MudPaper>
+
+                                <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                                    <MudText Typo="Typo.h6" Class="mb-3">Canturi</MudText>
+                                    @if (!GrupuriCant.Any())
+                                    {
+                                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio piesă cu cant încă.</MudText>
+                                    }
+                                    else
+                                    {
+                                        <MudTable Items="@GrupuriCant" Hover="true" Dense="true">
+                                            <HeaderContent>
+                                                <MudTh>Cant</MudTh>
+                                                <MudTh>Necesar calculat</MudTh>
+                                                <MudTh>Rezervă</MudTh>
+                                                <MudTh>Pentru ofertă</MudTh>
+                                                <MudTh>Preț unitar</MudTh>
+                                                <MudTh>Total</MudTh>
+                                            </HeaderContent>
+                                            <RowTemplate>
+                                                <MudTd DataLabel="Cant">@context.Nume</MudTd>
+                                                <MudTd DataLabel="Necesar calculat">@($"{context.NecesarMl:0.##} ml")</MudTd>
+                                                <MudTd DataLabel="Rezervă">5%</MudTd>
+                                                <MudTd DataLabel="Pentru ofertă"><b>@($"{context.OfertaMl:0} ml")</b></MudTd>
+                                                <MudTd DataLabel="Preț unitar">@(context.PretUnitar.HasValue ? $"{context.PretUnitar:N2} lei/ml" : "-")</MudTd>
+                                                <MudTd DataLabel="Total">@(context.Total.HasValue ? $"{context.Total:N2} lei" : "-")</MudTd>
+                                            </RowTemplate>
+                                        </MudTable>
+                                        <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-2">
+                                            <MudText Typo="Typo.subtitle2">
+                                                Total cant pentru ofertă: @($"{GrupuriCant.Sum(g => g.OfertaMl):0} ml")
+                                            </MudText>
+                                        </MudStack>
+                                    }
+                                </MudPaper>
+                            }
+                        }
+                    </div>
+                </MudTabPanel>
+                <MudTabPanel Text="Feronerie"><MudAlert Severity="Severity.Info">Modul în construcție.</MudAlert></MudTabPanel>
+                <MudTabPanel Text="Ofertă">
+                    <div class="mt-4">
+                        <MudTabs Elevation="0" Rounded="true">
+                            <MudTabPanel Text="Calcul preț">
+                                <div class="mt-4">
+                                    <MudGrid Class="mb-4">
+                                        <MudItem xs="6" sm="3">
+                                            <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Materiale</MudText>
+                                                <MudText Typo="Typo.h6" Class="font-weight-bold">@($"{_rezumatOferta?.TotalMateriale ?? 0:N2} lei")</MudText>
+                                            </MudPaper>
+                                        </MudItem>
+                                        <MudItem xs="6" sm="3">
+                                            <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Feronerie</MudText>
+                                                <MudText Typo="Typo.h6" Class="font-weight-bold">@($"{_rezumatOferta?.TotalFeronerie ?? 0:N2} lei")</MudText>
+                                            </MudPaper>
+                                        </MudItem>
+                                        <MudItem xs="6" sm="3">
+                                            <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Servicii</MudText>
+                                                <MudText Typo="Typo.h6" Class="font-weight-bold">@($"{_rezumatOferta?.TotalServicii ?? 0:N2} lei")</MudText>
+                                            </MudPaper>
+                                        </MudItem>
+                                        <MudItem xs="6" sm="3">
+                                            <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Manoperă</MudText>
+                                                <MudText Typo="Typo.h6" Class="font-weight-bold">@($"{_rezumatOferta?.Manopera ?? 0:N2} lei")</MudText>
+                                            </MudPaper>
+                                        </MudItem>
+                                        <MudItem xs="6" sm="3">
+                                            <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Cost total</MudText>
+                                                <MudText Typo="Typo.h6" Class="font-weight-bold">@($"{_rezumatOferta?.CostTotal ?? 0:N2} lei")</MudText>
+                                            </MudPaper>
+                                        </MudItem>
+                                        <MudItem xs="6" sm="3">
+                                            <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Preț de vânzare</MudText>
+                                                <MudText Typo="Typo.h6" Class="font-weight-bold">@($"{_rezumatOferta?.PretVanzareTotal ?? 0:N2} lei")</MudText>
+                                            </MudPaper>
+                                        </MudItem>
+                                        <MudItem xs="6" sm="3">
+                                            <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Profit estimat</MudText>
+                                                <MudText Typo="Typo.h6" Class="font-weight-bold" Style="color: var(--mud-palette-success);">@($"{_rezumatOferta?.ProfitEstimat ?? 0:N2} lei")</MudText>
+                                            </MudPaper>
+                                        </MudItem>
+                                        <MudItem xs="6" sm="3">
+                                            <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Marjă</MudText>
+                                                <MudText Typo="Typo.h6" Class="font-weight-bold">@($"{_rezumatOferta?.MarjaProcent ?? 0:0.#}%")</MudText>
+                                            </MudPaper>
+                                        </MudItem>
+                                    </MudGrid>
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                                        <MudText Typo="Typo.h6">Calcul preț</MudText>
+                                        <MudStack Row="true" Spacing="2">
+                                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Sync"
+                                                    OnClick="SincronizeazaMateriale" Disabled="_seSincronizeaza">
+                                                Sincronizează materiale și cant
+                                            </MudButton>
+                                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                                                    OnClick="DeschideDialogAdaugaLinieOferta">
+                                                Adaugă rând
+                                            </MudButton>
+                                        </MudStack>
+                                    </MudStack>
+
+                                    @if (_liniiOferta is { Count: 0 })
+                                    {
+                                        <MudAlert Severity="Severity.Info">
+                                            Niciun rând adăugat încă. Adaugă materiale, feronerie sau servicii din catalog.
+                                        </MudAlert>
+                                    }
+                                    else if (_liniiOferta is not null)
+                                    {
+                                        @if (LiniiCuPretModificat.Any())
+                                        {
+                                            <MudAlert Severity="Severity.Warning" Class="mb-3">
+                                                @LiniiCuPretModificat.Count rânduri au preț modificat în catalog față de ofertă. Prețurile din ofertă rămân neschimbate până le actualizezi manual.
+                                                <MudButton Variant="Variant.Text" Size="Size.Small" Class="ml-2" OnClick="@(() => _aratArandurileModificate = !_aratArandurileModificate)">
+                                                    @(_aratArandurileModificate ? "Ascunde detalii" : "Vezi detalii")
+                                                </MudButton>
+                                            </MudAlert>
+
+                                            @if (_aratArandurileModificate)
+                                            {
+                                                <MudPaper Class="pa-3 mb-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                                                    @foreach (var linie in LiniiCuPretModificat)
+                                                    {
+                                                        <MudText Typo="Typo.body2">
+                                                            @linie.Descriere — ofertă: @($"{linie.PretVanzare:N2} lei") · catalog acum: @($"{linie.PretCurentCatalog:N2} lei")
+                                                        </MudText>
+                                                    }
+                                                </MudPaper>
+                                            }
+                                        }
+                                        <MudTable Items="@_liniiOferta" Hover="true" Dense="true">
+                                            <HeaderContent>
+                                                <MudTh>Descriere</MudTh>
+                                                <MudTh>Sursă</MudTh>
+                                                <MudTh>Cant. calculată</MudTh>
+                                                <MudTh>Cant. ofertată</MudTh>
+                                                <MudTh>UM</MudTh>
+                                                <MudTh>Preț cost</MudTh>
+                                                <MudTh>Preț vânzare</MudTh>
+                                                <MudTh>Total</MudTh>
+                                                <MudTh>Vizibil client</MudTh>
+                                                <MudTh></MudTh>
+                                            </HeaderContent>
+                                            <RowTemplate>
+                                                <MudTd DataLabel="Descriere">@context.Descriere</MudTd>
+                                                <MudTd DataLabel="Sursă">
+                                                    <MudChip T="string" Size="Size.Small" Color="@CuloareSursaOferta(context)">@NumeSursaOferta(context)</MudChip>
+                                                </MudTd>
+                                                <MudTd DataLabel="Cant. calculată">@($"{context.CantitateCalculata:0.##}")</MudTd>
+                                                <MudTd DataLabel="Cant. ofertată">@($"{context.CantitateOfertata:0.##}")</MudTd>
+                                                <MudTd DataLabel="UM">@NumeUMOferta(context.UM)</MudTd>
+                                                <MudTd DataLabel="Preț cost">@($"{context.PretCost:N2} lei")</MudTd>
+                                                <MudTd DataLabel="Preț vânzare">@($"{context.PretVanzare:N2} lei")</MudTd>
+                                                <MudTd DataLabel="Total">@($"{context.Total:N2} lei")</MudTd>
+                                                <MudTd DataLabel="Vizibil client">
+                                                    <MudSwitch T="bool" Value="@context.VizibilClient" ValueChanged="@(_ => ComutaVizibilClientOferta(context.Id))" Color="Color.Success" />
+                                                </MudTd>
+                                                <MudTd>
+                                                    @if (context.EsteAutomat)
+                                                    {
+                                                        <MudTooltip Text="Se editează din tab-ul Materiale">
+                                                            <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" Disabled="true" />
+                                                        </MudTooltip>
+                                                    }
+                                                    else
+                                                    {
+                                                        <MudStack Row="true" Spacing="0">
+                                                            <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small"
+                                                                        OnClick="@(() => DeschideDialogEditeazaCantitateOferta(context))" />
+                                                            <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small"
+                                                                        OnClick="@(() => StergeLinieOferta(context.Id))" />
+                                                        </MudStack>
+                                                    }
+                                                </MudTd>
+                                            </RowTemplate>
+                                        </MudTable>
+                                    }
+                                </div>
+                            </MudTabPanel>
+                            <MudTabPanel Text="Document ofertă">
+                                <MudAlert Severity="Severity.Info" Class="mt-4">Modul în construcție.</MudAlert>
+                            </MudTabPanel>
+                        </MudTabs>
+                    </div>
+                </MudTabPanel>
+                <MudTabPanel Text="Cheltuieli">
+                    <div class="mt-4">
+                        <MudGrid Class="mb-4">
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); cursor: pointer;"
+                                        @onclick="DeschideDialogRezumatCheltuieli">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                                        <MudStack Spacing="1">
+                                            <MudText Typo="Typo.body2" Class="mud-text-secondary">Total cheltuieli</MudText>
+                                            <MudText Typo="Typo.h5" Class="font-weight-bold">@FormateazaLei(TotalCheltuieli)</MudText>
+                                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@(ProcentDinValoare)% din valoarea proiectului</MudText>
+                                        </MudStack>
+                                        <MudAvatar Color="Color.Success" Variant="Variant.Filled" Size="Size.Medium">
+                                            <MudIcon Icon="@Icons.Material.Outlined.AccountBalanceWallet" Size="Size.Small" />
+                                        </MudAvatar>
+                                    </MudStack>
+                                </MudPaper>
+                            </MudItem>
+
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); cursor: pointer;"
+                                        @onclick="@(() => DeschideDialogDetaliiCategorie(CategorieCheltuiala.Materiale))">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                                        <MudStack Spacing="1">
+                                            <MudText Typo="Typo.body2" Class="mud-text-secondary">Materiale</MudText>
+                                            <MudText Typo="Typo.h5" Class="font-weight-bold">@FormateazaLei(TotalMateriale)</MudText>
+                                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@(ProcentMateriale)% din cheltuieli</MudText>
+                                        </MudStack>
+                                        <MudAvatar Color="Color.Info" Variant="Variant.Filled" Size="Size.Medium">
+                                            <MudIcon Icon="@Icons.Material.Outlined.Inventory2" Size="Size.Small" />
+                                        </MudAvatar>
+                                    </MudStack>
+                                </MudPaper>
+                            </MudItem>
+
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); cursor: pointer;"
+                                        @onclick="@(() => DeschideDialogDetaliiCategorie(CategorieCheltuiala.Servicii))">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                                        <MudStack Spacing="1">
+                                            <MudText Typo="Typo.body2" Class="mud-text-secondary">Servicii</MudText>
+                                            <MudText Typo="Typo.h5" Class="font-weight-bold">@FormateazaLei(TotalServicii)</MudText>
+                                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@(ProcentServicii)% din cheltuieli</MudText>
+                                        </MudStack>
+                                        <MudAvatar Color="Color.Secondary" Variant="Variant.Filled" Size="Size.Medium">
+                                            <MudIcon Icon="@Icons.Material.Outlined.Handyman" Size="Size.Small" />
+                                        </MudAvatar>
+                                    </MudStack>
+                                </MudPaper>
+                            </MudItem>
+
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); cursor: pointer;"
+                                        @onclick="@(() => DeschideDialogDetaliiCategorie(CategorieCheltuiala.AlteCheltuieli))">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                                        <MudStack Spacing="1">
+                                            <MudText Typo="Typo.body2" Class="mud-text-secondary">Alte cheltuieli</MudText>
+                                            <MudText Typo="Typo.h5" Class="font-weight-bold">@FormateazaLei(TotalAlteCheltuieli)</MudText>
+                                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@(ProcentAlteCheltuieli)% din cheltuieli</MudText>
+                                        </MudStack>
+                                        <MudAvatar Color="Color.Warning" Variant="Variant.Filled" Size="Size.Medium">
+                                            <MudIcon Icon="@Icons.Material.Outlined.Category" Size="Size.Small" />
+                                        </MudAvatar>
+                                    </MudStack>
+                                </MudPaper>
+                            </MudItem>
+                        </MudGrid>
+
+                        <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                            <MudText Typo="Typo.h6" Class="mb-3">Cheltuieli proiect</MudText>
+
+                            @if (_cheltuieli is { Count: 0 })
+                            {
+                                <MudAlert Severity="Severity.Info">Nicio cheltuială înregistrată încă pentru acest proiect.</MudAlert>
+                            }
+                            else if (_cheltuieli is not null)
+                            {
+                            <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Class="mb-3">
+                                <MudTextField T="string" @bind-Value="_cautareCheltuieli" Placeholder="Caută cheltuieli..."
+                                            Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                                            Immediate="true" Style="max-width: 260px;" />
+
+                                <MudSelect T="CategorieCheltuiala?" @bind-Value="_filtruCategorie" Placeholder="Categorie" Clearable="true" Style="max-width: 180px;">
+                                    <MudSelectItem T="CategorieCheltuiala?" Value="CategorieCheltuiala.Materiale">Materiale</MudSelectItem>
+                                    <MudSelectItem T="CategorieCheltuiala?" Value="CategorieCheltuiala.Servicii">Servicii</MudSelectItem>
+                                    <MudSelectItem T="CategorieCheltuiala?" Value="CategorieCheltuiala.AlteCheltuieli">Alte cheltuieli</MudSelectItem>
+                                </MudSelect>
+
+                                <MudSelect T="Guid?" @bind-Value="_filtruFurnizorId" Placeholder="Furnizor" Clearable="true" Style="max-width: 180px;">
+                                    @if (_furnizoriDisponibili is not null)
+                                    {
+                                        @foreach (var furnizor in _furnizoriDisponibili)
+                                        {
+                                            <MudSelectItem T="Guid?" Value="furnizor.Id">@furnizor.Nume</MudSelectItem>
+                                        }
+                                    }
+                                </MudSelect>
+
+                                <MudSelect T="string" @bind-Value="_filtruStatus" Placeholder="Status" Clearable="true" Style="max-width: 180px;">
+                                    <MudSelectItem T="string" Value="@("Ciorna")">Ciornă</MudSelectItem>
+                                    <MudSelectItem T="string" Value="@("Platita")">Plătită</MudSelectItem>
+                                    <MudSelectItem T="string" Value="@("InAsteptare")">În așteptare</MudSelectItem>
+                                </MudSelect>
+
+                                <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Tune"
+                                        OnClick="@(() => _afiseazaMaiMulteFiltre = !_afiseazaMaiMulteFiltre)">
+                                    Mai multe filtre
+                                </MudButton>
+                            </MudStack>
+
+                            @if (_afiseazaMaiMulteFiltre)
+                            {
+                                <MudPaper Class="pa-3 mb-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                                    <MudGrid>
+                                        <MudItem xs="12" sm="6" md="3">
+                                            <MudDatePicker @bind-Date="_filtruDataDeLa" Label="De la" />
+                                        </MudItem>
+                                        <MudItem xs="12" sm="6" md="3">
+                                            <MudDatePicker @bind-Date="_filtruDataPanaLa" Label="Până la" />
+                                        </MudItem>
+                                        <MudItem xs="12" sm="6" md="3">
+                                            <MudSelect T="bool?" @bind-Value="_filtruAreTva" Label="TVA" Clearable="true">
+                                                <MudSelectItem T="bool?" Value="true">Cu TVA</MudSelectItem>
+                                                <MudSelectItem T="bool?" Value="false">Fără TVA</MudSelectItem>
+                                            </MudSelect>
+                                        </MudItem>
+                                        <MudItem xs="12" sm="6" md="3">
+                                            <MudSelect T="bool?" @bind-Value="_filtruAreFactura" Label="Factură" Clearable="true">
+                                                <MudSelectItem T="bool?" Value="true">Cu factură</MudSelectItem>
+                                                <MudSelectItem T="bool?" Value="false">Fără factură</MudSelectItem>
+                                            </MudSelect>
+                                        </MudItem>
+                                        <MudItem xs="12" sm="6" md="3">
+                                            <MudSelect T="MetodaPlata?" @bind-Value="_filtruMetodaPlata" Label="Metodă de plată" Clearable="true">
+                                                <MudSelectItem T="MetodaPlata?" Value="MetodaPlata.Numerar">Numerar</MudSelectItem>
+                                                <MudSelectItem T="MetodaPlata?" Value="MetodaPlata.Card">Card</MudSelectItem>
+                                                <MudSelectItem T="MetodaPlata?" Value="MetodaPlata.TransferBancar">Transfer bancar</MudSelectItem>
+                                                <MudSelectItem T="MetodaPlata?" Value="MetodaPlata.Altul">Altul</MudSelectItem>
+                                            </MudSelect>
+                                        </MudItem>
+                                        <MudItem xs="12" sm="6" md="3" Class="d-flex align-end">
+                                            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="ResetareFiltreCheltuieli">
+                                                Resetează filtrele
+                                            </MudButton>
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudPaper>
+                            }
+
+                            <MudTable Items="@_cheltuieli" Hover="true" Dense="true" Filter="@FiltruCheltuieli">
+                                <HeaderContent>
+                                    <MudTh>Data</MudTh>
+                                    <MudTh>Descriere</MudTh>
+                                    <MudTh>Categorie</MudTh>
+                                    <MudTh>Furnizor</MudTh>
+                                    <MudTh>Factură</MudTh>
+                                    <MudTh>Fără TVA</MudTh>
+                                    <MudTh>TVA</MudTh>
+                                    <MudTh>Total</MudTh>
+                                    <MudTh>Status</MudTh>
+                                    <MudTh></MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd DataLabel="Data">@FormateazaDataScurta(context.Data)</MudTd>
+                                    <MudTd DataLabel="Descriere">@context.Descriere</MudTd>
+                                    <MudTd DataLabel="Categorie">
+                                        <MudChip T="string" Size="Size.Small" Color="@CuloareCategorie(context.Categorie)">@NumeCategorieScurt(context.Categorie)</MudChip>
+                                    </MudTd>
+                                    <MudTd DataLabel="Furnizor">@(context.FurnizorNume ?? "-")</MudTd>
+                                    <MudTd DataLabel="Factură">@(context.NumarFactura ?? "-")</MudTd>
+                                    <MudTd DataLabel="Fără TVA">@FormateazaLei(context.ValoareFaraTva)</MudTd>
+                                    <MudTd DataLabel="TVA">@FormateazaLei(context.Tva)</MudTd>
+                                    <MudTd DataLabel="Total">@FormateazaLei(context.Total)</MudTd>
+                                    <MudTd DataLabel="Status">
+                                        @if (context.Status == StatusCheltuiala.Ciorna)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Default">Ciornă</MudChip>
+                                        }
+                                        else if (context.StatusPlata == StatusPlata.Platita)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Success">Plătită</MudChip>
+                                        }
+                                        else
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Warning">În așteptare</MudChip>
+                                        }
+                                    </MudTd>
+                                    <MudTd>
+                                        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small">
+                                            <MudMenuItem OnClick="@(() => DeschideDialogDetaliiCheltuiala(context.Id))">Vezi detalii</MudMenuItem>
+                                            <MudMenuItem OnClick="@(() => DeschideDialogEditeazaCheltuiala(context))">Editează</MudMenuItem>
+                                            <MudMenuItem Disabled="true">Vezi factura (în curând)</MudMenuItem>
+                                            <MudMenuItem Disabled="true">Descarcă factura (în curând)</MudMenuItem>
+                                            <MudMenuItem Disabled="true">Schimbă proiectul (în curând)</MudMenuItem>
+                                            <MudMenuItem Disabled="true">Împarte pe proiecte (în curând)</MudMenuItem>
+                                            <MudMenuItem OnClick="@(() => MarcheazaCaPlatita(context.Id))" Disabled="@(context.StatusPlata == StatusPlata.Platita)">
+                                                Marchează ca plătită
+                                            </MudMenuItem>
+                                            <MudMenuItem OnClick="@(() => DuplicaCheltuiala(context.Id))">Duplică</MudMenuItem>
+                                            <MudMenuItem Disabled="true">Anulează (în curând)</MudMenuItem>
+                                            <MudMenuItem OnClick="@(() => StergeCheltuiala(context.Id))">Șterge</MudMenuItem>
+                                        </MudMenu>
+                                    </MudTd>
+                                </RowTemplate>
+                                <PagerContent>
+                                    <MudTablePager PageSizeOptions="new int[] { 10, 25, 50 }" />
+                                </PagerContent>
+                            </MudTable>
+                            }
+                        </MudPaper>
+                        <MudGrid Class="mt-4">
+                            <MudItem xs="12" md="4">
+                                <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                                        <MudText Typo="Typo.subtitle1">Cheltuieli pe categorii</MudText>
+                                        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="DeschideDialogRaportCategorii">
+                                            Vezi detalii
+                                        </MudButton>
+                                    </MudStack>
+
+                                    @if (TotalCheltuieli <= 0)
+                                    {
+                                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio cheltuială confirmată încă.</MudText>
+                                    }
+                                    else
+                                    {
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                                            <svg viewBox="0 0 200 200" width="140" height="140">
+                                                <circle cx="100" cy="100" r="70" fill="transparent" stroke="#e8e8e8" stroke-width="30" />
+                                                @{
+                                                    decimal cumulativ = 0;
+                                                }
+                                                @foreach (var segment in SegmenteDonut)
+                                                {
+                                                    <circle cx="100" cy="100" r="70" fill="transparent" stroke="@segment.Culoare" stroke-width="30"
+                                                            stroke-dasharray="@($"{ArcLength(segment.Procent)} {CircumferenceStr}")"
+                                                            stroke-dashoffset="@ArcOffset(cumulativ)"
+                                                            transform="rotate(-90 100 100)"
+                                                            style="cursor: pointer;"
+                                                            @onclick="@(() => FiltreazaDupaCategorieDinDonut(segment.Categorie))">
+                                                    </circle>
+                                                    cumulativ += segment.Procent;
+                                                }
+                                            </svg>
+                                            <MudStack Spacing="1">
+                                                @foreach (var segment in SegmenteDonut)
+                                                {
+                                                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Style="cursor: pointer;"
+                                                            @onclick="@(() => FiltreazaDupaCategorieDinDonut(segment.Categorie))">
+                                                        <div style="@($"width:10px;height:10px;border-radius:50%;background-color:{segment.Culoare};")"></div>
+                                                        <MudText Typo="Typo.caption">@segment.Nume — @($"{segment.Procent:0.#}%")</MudText>
+                                                    </MudStack>
+                                                }
+                                            </MudStack>
+                                        </MudStack>
+                                    }
+                                </MudPaper>
+                            </MudItem>
+
+                            <MudItem xs="12" md="4">
+                                <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%; cursor: pointer;"
+                                        @onclick="DeschideDialogDetaliiBuget">
+                                    <MudText Typo="Typo.subtitle1" Class="mb-2">Buget vs cheltuieli</MudText>
+
+                                    @if (_proiect?.BugetAlocat is null)
+                                    {
+                                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Fără buget alocat pentru acest proiect.</MudText>
+                                    }
+                                    else
+                                    {
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mb-1">
+                                            <div>
+                                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Buget alocat</MudText>
+                                                <MudText Typo="Typo.body1">@($"{_proiect.BugetAlocat.Value:N2} lei")</MudText>
+                                            </div>
+                                            <div style="text-align: right;">
+                                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Disponibil</MudText>
+                                                <MudText Typo="Typo.body1" Color="@((Disponibil ?? 0) >= 0 ? Color.Success : Color.Error)">
+                                                    @($"{Disponibil:N2} lei")
+                                                </MudText>
+                                            </div>
+                                        </MudStack>
+
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Cheltuieli totale</MudText>
+                                        <MudText Typo="Typo.body1" Class="mb-1">@($"{CheltuitDinBuget:N2} lei")</MudText>
+
+                                        <MudProgressLinear Color="@CuloareConsumBuget()" Value="@((double)Math.Min(ProcentConsumat ?? 0, 100))" Class="mt-1" Rounded="true" />
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary mt-1">@($"{ProcentConsumat:0.#}% consumat")</MudText>
+                                    }
+                                </MudPaper>
+                            </MudItem>
+
+                            <MudItem xs="12" md="4">
+                                <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                                        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                            <MudIcon Icon="@Icons.Material.Outlined.WarningAmber" Color="Color.Primary" Size="Size.Small" />
+                                            <MudText Typo="Typo.subtitle1">Alertă cheltuieli</MudText>
+                                        </MudStack>
+                                        @if (AlerteCheltuieliTab.Any())
+                                        {
+                                            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="DeschideDialogToateAlerteleCheltuieli">
+                                                Vezi detalii
+                                            </MudButton>
+                                        }
+                                    </MudStack>
+
+                                    @if (!AlerteCheltuieliTab.Any())
+                                    {
+                                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio alertă activă.</MudText>
+                                    }
+                                    else
+                                    {
+                                        <MudAlert Severity="@SeveritateMud(AlerteCheltuieliTab[0].Severitate)" Dense="true">
+                                            @AlerteCheltuieliTab[0].Mesaj
+                                        </MudAlert>
+                                    }
+                                </MudPaper>
+                            </MudItem>
+                        </MudGrid>
+                    </div>
+                </MudTabPanel>
+                <MudTabPanel Text="Încasări"><MudAlert Severity="Severity.Info">Modul în construcție.</MudAlert></MudTabPanel>
+                <MudTabPanel Text="Mai multe">
+                    <MudList T="string" Clickable="true">
+                        <MudListItem T="string" Icon="@Icons.Material.Outlined.Folder">Documente — modul în construcție</MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Outlined.PhotoLibrary">Fotografii — modul în construcție</MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Outlined.TrendingUp">Profit — modul în construcție</MudListItem>
+                    </MudList>
+                </MudTabPanel>
+            </MudTabs>
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            @if (_tabActiv == 0)
+            {
+                <MudPaper Class="pa-4 mb-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mb-2">
+                        <MudIcon Icon="@Icons.Material.Outlined.Schedule" Color="Color.Primary" Size="Size.Small" />
+                        <MudText Typo="Typo.subtitle1">Activitate recentă</MudText>
+                    </MudStack>
+                @if (_activitateRecenta is { Count: 0 })
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio activitate încă.</MudText>
+                }
+                else
+                {
+                    <MudStack Spacing="2">
+                        @foreach (var activitate in _activitateRecenta)
+                        {
+                            <div>
+                                <MudText Typo="Typo.body2">@activitate.Descriere</MudText>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                    @FormateazaDataOra(activitate.Data) — @(activitate.Utilizator ?? "Sistem")
+                                </MudText>
+                            </div>
+                        }
+                    </MudStack>
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Class="mt-2" OnClick="DeschideDialogToataActivitatea">
+                        Vezi toată activitatea
+                    </MudButton>
+                }
+            </MudPaper>
+
+            <MudPaper Class="pa-4 mb-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                        <MudIcon Icon="@Icons.Material.Outlined.Flag" Color="Color.Primary" Size="Size.Small" />
+                        <MudText Typo="Typo.subtitle1">Următorul pas</MudText>
+                    </MudStack>
+                    <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" OnClick="DeschideDialogUrmatorulPas" />
+                </MudStack>
+                @if (!string.IsNullOrWhiteSpace(_proiect.DescriereUrmatorulPas))
+                {
+                    <MudText Typo="Typo.body1" Class="font-weight-medium">@_proiect.DescriereUrmatorulPas</MudText>
+                    @if (_proiect.TermenUrmatorulPas.HasValue)
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">Termen: @FormateazaDataLunga(_proiect.TermenUrmatorulPas.Value)</MudText>
+                    }
+                    <MudButton Variant="Variant.Outlined" Color="Color.Success" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Check"
+                               OnClick="FinalizeazaUrmatorulPas">
+                        Marchează ca finalizat
+                    </MudButton>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Niciun pas următor setat.</MudText>
+                }
+            </MudPaper>
+
+            <MudPaper Class="pa-4 mb-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mb-2">
+                    <MudIcon Icon="@Icons.Material.Outlined.Folder" Color="Color.Primary" Size="Size.Small" />
+                    <MudText Typo="Typo.subtitle1">Documente recente</MudText>
+                </MudStack>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                    Niciun document încărcat încă — modulul de documente vine într-un pas separat.
+                </MudText>
+            </MudPaper>
+
+            <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mb-2">
+                    <MudIcon Icon="@Icons.Material.Outlined.WarningAmber" Color="Color.Primary" Size="Size.Small" />
+                    <MudText Typo="Typo.subtitle1">Alerte proiect</MudText>
+                </MudStack>
+                @if (_alerte is { Count: 0 })
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio alertă activă.</MudText>
+                }
+                else
+                {
+                    <MudStack Spacing="2">
+                        @foreach (var alerta in _alerte)
+                        {
+                            <MudAlert Severity="@SeveritateMud(alerta.Severitate)" Dense="true">@alerta.Mesaj</MudAlert>
+                        }
+                    </MudStack>
+                }
+            </MudPaper>
+            }        
+            else if (_tabActiv == 4)
+            {
+                <MudPaper Class="pa-4 mb-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Alerte și probleme</MudText>
+                    @if (!AlerteMateriale.Any())
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio alertă activă.</MudText>
+                    }
+                    else
+                    {
+                        <MudStack Spacing="2">
+                            @foreach (var alerta in AlerteMateriale)
+                            {
+                                <MudAlert Severity="@alerta.Severitate" Dense="true">@alerta.Mesaj</MudAlert>
+                            }
+                        </MudStack>
+                    }
+                </MudPaper>
+
+                <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Setări calcul curente</MudText>
+                    @if (_calcule is null || !_calcule.Any())
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Niciun material calculat încă.</MudText>
+                    }
+                    else
+                    {
+                        <MudStack Spacing="1">
+                            @foreach (var calcul in _calcule)
+                            {
+                                <MudText Typo="Typo.caption">
+                                    <b>@calcul.MaterialNume:</b>
+                                    @(calcul.LungimeFoaieMm.HasValue ? $" {calcul.LungimeFoaieMm:0}×{calcul.LatimeFoaieMm:0} mm" : " fără dimensiuni")@(_produseCatalog.TryGetValue(calcul.MaterialProdusId, out var prod) ? $", kerf {prod.KerfMm ?? 4:0.#} mm, rotire: {(prod.PermiteRotire ? "Da" : "Nu")}" : "")
+                                </MudText>
+                            }
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Margine curățare: 10 mm (implicit)</MudText>
+                        </MudStack>
+                    }
+                </MudPaper>
+            }
+            else if (_tabActiv == 7)
+            {
+                <MudPaper Class="pa-4 mb-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                            <MudIcon Icon="@Icons.Material.Outlined.Receipt" Color="Color.Primary" Size="Size.Small" />
+                            <MudText Typo="Typo.subtitle1">Facturi recente</MudText>
+                        </MudStack>
+                        @if (FacturiRecente.Any())
+                        {
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="DeschideDialogToateFacturile">
+                                Vezi toate
+                            </MudButton>
+                        }
+                    </MudStack>
+
+                    @if (!FacturiRecente.Any())
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio factură înregistrată încă.</MudText>
+                    }
+                    else
+                    {
+                        <MudStack Spacing="2">
+                            @foreach (var factura in FacturiRecente)
+                            {
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center"
+                                        Style="cursor: pointer;" @onclick="@(() => DeschideDialogDetaliiCheltuiala(factura.Id))">
+                                    <div>
+                                        <MudText Typo="Typo.body2" Class="font-weight-medium">@factura.NumarFactura – @(factura.FurnizorNume ?? "-")</MudText>
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@($"{factura.Total:N2} lei")</MudText>
+                                    </div>
+                                    @if (factura.Status == StatusCheltuiala.Ciorna)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Default">Ciornă</MudChip>
+                                    }
+                                    else if (factura.StatusPlata == StatusPlata.Platita)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Success">Plătită</MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">În așteptare</MudChip>
+                                    }
+                                </MudStack>
+                            }
+                        </MudStack>
+                    }
+                </MudPaper>
+
+                <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Scanează factură (OCR)</MudText>
+                    <MudStack AlignItems="AlignItems.Center" Class="pa-4" Style="border: 1px dashed var(--mud-palette-lines-default); border-radius: 8px;">
+                        <MudIcon Icon="@Icons.Material.Outlined.DocumentScanner" Size="Size.Large" Class="mud-text-secondary mb-1" />
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary" Align="Align.Center">
+                            Nicio factură scanată încă.
+                        </MudText>
+                        <MudTooltip Text="În curând">
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Disabled="true" Class="mt-1">
+                                Încarcă factură
+                            </MudButton>
+                        </MudTooltip>
+                    </MudStack>
+                </MudPaper>
+            }
+        </MudItem>
+    
+            </MudGrid>
+        }
+
+@code {
+    [Parameter] public Guid ProiectId { get; set; }
+
+    private ProiectDto? _proiect;
+    private List<SpatiuProiectDto>? _spatii;
+    private List<IstoricStatusDto>? _istoricStatus;
+    private List<NotaInternaDto>? _noteInterne;
+    private List<ActivitateDto>? _activitateRecenta;
+    private List<AlertaDto>? _alerte;
+    private List<CheltuialaDto>? _cheltuieli;
+    private List<FurnizorDto>? _furnizoriDisponibili;
+    private CategorieCheltuiala? _filtruCategorie;
+    private Guid? _filtruFurnizorId;
+    private string? _filtruStatus;
+    private DateTime? _filtruDataDeLa;
+    private DateTime? _filtruDataPanaLa;
+    private bool? _filtruAreTva;
+    private bool? _filtruAreFactura;
+    private MetodaPlata? _filtruMetodaPlata;
+    private bool _afiseazaMaiMulteFiltre;
+    private string _cautareCheltuieli = string.Empty;
+    private int _tabActiv;
+    private bool _seIncarca = true;
+    private List<PiesaDto>? _piese;
+    private List<CalculMaterialDto>? _calcule;
+    private Dictionary<Guid, ProdusDto> _produseCatalog = new();
+    private List<LinieOfertaDto>? _liniiOferta;
+    private RezumatOfertaDto? _rezumatOferta;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await IncarcaProiect();
+    }
+
+    private async Task IncarcaProiect()
+    {
+        _proiect = await ProiectService.ObtineProiectDupaIdAsync(ProiectId);
+
+        if (_proiect is not null)
+        {
+            _spatii = (await ProiectService.ObtineSpatiiDupaProiectAsync(ProiectId)).ToList();
+            _istoricStatus = (await ProiectService.ObtineIstoricStatusAsync(ProiectId)).ToList();
+            _noteInterne = (await ProiectService.ObtineNoteInterneDupaProiectAsync(ProiectId)).ToList();
+            _activitateRecenta = (await ProiectService.ObtineActivitateRecentaAsync(ProiectId, 5)).ToList();
+            _alerte = (await ProiectService.ObtineAlerteAsync(ProiectId)).ToList();
+            _cheltuieli = (await CheltuialaService.ObtineCheltuieliDupaProiectAsync(ProiectId)).ToList();
+            _furnizoriDisponibili = (await CheltuialaService.ObtineFurnizoriAsync()).ToList();
+            _piese = (await PiesaService.ObtinePieseDupaProiectAsync(ProiectId)).ToList();
+            _calcule = (await CalculMaterialService.ObtineCalculeAsync(ProiectId)).ToList();
+            _produseCatalog = (await ProdusService.ObtineToateProduseleAsync()).ToDictionary(p => p.Id);
+            _liniiOferta = (await OfertaService.ObtineLiniiAsync(ProiectId)).ToList();
+            _rezumatOferta = await OfertaService.ObtineRezumatAsync(ProiectId);
+        }
+
+        _seIncarca = false;
+    }
+
+    private async Task DeschideDialogSchimbaStatus()
+    {
+        var dialog = await DialogService.ShowAsync<SchimbaStatusDialog>("Schimbă status");
+        var rezultat = await dialog.Result;
+
+        if (rezultat is not { Canceled: false }) return;
+
+        var (statusNou, observatie) = ((StatusProiect, string?))rezultat.Data!;
+
+        await ProiectService.SchimbaStatusAsync(ProiectId, statusNou, observatie);
+        await IncarcaProiect();
+    }
+
+    private async Task DeschideDialogEditeazaProiect()
+    {
+        if (_proiect is null) return;
+
+        var parametri = new DialogParameters { ["ProiectDeEditat"] = _proiect };
+        var dialog = await DialogService.ShowAsync<EditeazaProiectDialog>("Editează proiect", parametri);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false })
+        {
+            await IncarcaProiect();
+        }
+    }
+
+    private async Task DeschideDialogObservatiiClient()
+    {
+        if (_proiect is null) return;
+
+        var parametri = new DialogParameters { ["ObservatiiActuale"] = _proiect.ObservatiiClient };
+        var dialog = await DialogService.ShowAsync<EditeazaObservatiiClientDialog>("Observații client", parametri);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false, Data: string observatiiNoi })
+        {
+            await ProiectService.ActualizeazaObservatiiClientAsync(ProiectId, observatiiNoi);
+            await IncarcaProiect();
+        }
+    }
+
+    private async Task DeschideDialogDateMontaj()
+    {
+        if (_proiect is null) return;
+
+        var parametri = new DialogParameters { ["Proiect"] = _proiect };
+        var dialog = await DialogService.ShowAsync<EditeazaDateMontajDialog>("Date montaj", parametri);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false })
+        {
+            await IncarcaProiect();
+        }
+    }
+
+    private async Task DeschideDialogAdaugaSpatiu()
+    {
+        var parametri = new DialogParameters { ["ProiectId"] = ProiectId };
+        var dialog = await DialogService.ShowAsync<AdaugaSpatiuDialog>("Adaugă spațiu", parametri);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false })
+        {
+            _spatii = (await ProiectService.ObtineSpatiiDupaProiectAsync(ProiectId)).ToList();
+        }
+    }
+
+    private async Task DeschideDialogAdaugaPiese()
+    {
+        var parametri = new DialogParameters { ["ProiectId"] = ProiectId };
+        var optiuni = new DialogOptions { MaxWidth = MaxWidth.ExtraLarge, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<AdaugaPieseDialog>("Adaugă piese în serie", parametri, optiuni);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false })
+        {
+            _piese = (await PiesaService.ObtinePieseDupaProiectAsync(ProiectId)).ToList();
+        }
+    }
+
+    private async Task DeschideDialogEditeazaPiesa(PiesaDto piesa)
+    {
+        var parametri = new DialogParameters { ["ProiectId"] = ProiectId, ["PiesaDeEditat"] = piesa };
+        var dialog = await DialogService.ShowAsync<EditeazaPiesaDialog>("Editează piesă", parametri);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false })
+        {
+            _piese = (await PiesaService.ObtinePieseDupaProiectAsync(ProiectId)).ToList();
+        }
+    }
+
+    private async Task DuplicaPiesa(Guid id)
+    {
+        await PiesaService.DuplicaPiesaAsync(id);
+        _piese = (await PiesaService.ObtinePieseDupaProiectAsync(ProiectId)).ToList();
+    }
+
+    private async Task StergePiesa(Guid id)
+    {
+        var parametri = new DialogParameters
+        {
+            ["Mesaj"] = "Ești sigur? Această acțiune nu poate fi anulată.",
+            ["TextConfirmare"] = "Șterge"
+        };
+        var dialog = await DialogService.ShowAsync<ConfirmareDialog>("Șterge piesa", parametri);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false })
+        {
+            await PiesaService.StergePiesaAsync(id);
+            _piese = (await PiesaService.ObtinePieseDupaProiectAsync(ProiectId)).ToList();
+        }
+    }
+
+    private async Task CombinaDuplicatele()
+    {
+        var numarCombinat = await PiesaService.CombinaPieseleIdenticeAsync(ProiectId);
+        if (numarCombinat > 0)
+        {
+            _piese = (await PiesaService.ObtinePieseDupaProiectAsync(ProiectId)).ToList();
+        }
+    }
+
+    private int BucatiTotale => _piese?.Sum(p => p.Cantitate) ?? 0;
+    private decimal SuprafataTotala => _piese?.Sum(p => p.SuprafataM2) ?? 0;
+    private decimal CantTotal => _piese?.Sum(p => p.TotalCantMl) ?? 0;
+    private int PieseNeasociate => _piese?.Count(p => p.CorpId is null) ?? 0;
+    private int PieseFaraMaterial => _piese?.Count(p => p.MaterialProdusId is null) ?? 0;
+
+    private IEnumerable<(string Nume, decimal Valoare)> TotaluriPeMaterial =>
+        (_piese ?? new List<PiesaDto>())
+            .GroupBy(p => p.MaterialNume ?? "Fără material")
+            .Select(g => (g.Key, g.Sum(p => p.SuprafataM2)))
+            .OrderByDescending(g => g.Item2);
+
+    private IEnumerable<(string Nume, decimal Valoare)> TotaluriPeCant =>
+        (_piese ?? new List<PiesaDto>())
+            .Where(p => p.TotalCantMl > 0)
+            .GroupBy(p => p.MaterialCantNume ?? "Fără material cant")
+            .Select(g => (g.Key, g.Sum(p => p.TotalCantMl)))
+            .OrderByDescending(g => g.Item2);
+
+    private static string NumeFibra(DirectieFibra fibra) => fibra switch
+    {
+        DirectieFibra.Fara => "Fără",
+        DirectieFibra.Verticala => "Verticală",
+        DirectieFibra.Orizontala => "Orizontală",
+        _ => fibra.ToString()
+    };
+
+    private async Task DeschideDialogAdaugaLinieOferta()
+    {
+        var parametri = new DialogParameters { ["ProiectId"] = ProiectId };
+        var dialog = await DialogService.ShowAsync<AdaugaLinieOfertaDialog>("Adaugă rând", parametri);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false })
+        {
+            _liniiOferta = (await OfertaService.ObtineLiniiAsync(ProiectId)).ToList();
+            _rezumatOferta = await OfertaService.ObtineRezumatAsync(ProiectId);
+        }
+    }
+
+    private async Task DeschideDialogEditeazaCantitateOferta(LinieOfertaDto linie)
+    {
+        var parametri = new DialogParameters
+        {
+            ["LinieId"] = linie.Id,
+            ["CantitateActuala"] = linie.CantitateOfertata,
+            ["UM"] = linie.UM
+        };
+        var dialog = await DialogService.ShowAsync<EditeazaCantitateLinieDialog>("Editează cantitate", parametri);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false })
+        {
+            _liniiOferta = (await OfertaService.ObtineLiniiAsync(ProiectId)).ToList();
+            _rezumatOferta = await OfertaService.ObtineRezumatAsync(ProiectId);
+        }
+    }
+
+    private async Task ComutaVizibilClientOferta(Guid id)
+    {
+        await OfertaService.ComutaVizibilClientAsync(id);
+        _liniiOferta = (await OfertaService.ObtineLiniiAsync(ProiectId)).ToList();
+        _rezumatOferta = await OfertaService.ObtineRezumatAsync(ProiectId);
+    }
+
+    private async Task DeschideDialogEditeazaSetariOferta()
+    {
+        var parametri = new DialogParameters
+        {
+            ["ProiectId"] = ProiectId,
+            ["AvansActual"] = _proiect?.AvansProcent,
+            ["TermenExecutieActual"] = _proiect?.TermenExecutieZile,
+            ["ValabilitateActuala"] = _proiect?.ValabilitateOfertaZile
+        };
+        var dialog = await DialogService.ShowAsync<EditeazaSetariOfertaDialog>("Setări ofertă", parametri);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false })
+        {
+            await IncarcaProiect();
+        }
+    }
+
+    private async Task StergeLinieOferta(Guid id)
+    {
+        var parametri = new DialogParameters
+        {
+            ["Mesaj"] = "Ești sigur? Această acțiune nu poate fi anulată.",
+            ["TextConfirmare"] = "Șterge"
+        };
+        var dialog = await DialogService.ShowAsync<ConfirmareDialog>("Șterge rândul", parametri);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false })
+        {
+            await OfertaService.StergeLinieAsync(id);
+            _liniiOferta = (await OfertaService.ObtineLiniiAsync(ProiectId)).ToList();
+            _rezumatOferta = await OfertaService.ObtineRezumatAsync(ProiectId);
+        }
+    }
+
+    private static string NumeSursaOferta(LinieOfertaDto linie)
+    {
+        if (linie.EsteAutomat) return "Stoc";
+        return linie.Categorie switch
+        {
+            CategorieProdus.Feronerie => "Furnizor",
+            CategorieProdus.Servicii => "Serviciu",
+            _ => "Manual"
+        };
+    }
+
+    private static Color CuloareSursaOferta(LinieOfertaDto linie)
+    {
+        if (linie.EsteAutomat) return Color.Success;
+        return linie.Categorie switch
+        {
+            CategorieProdus.Feronerie => Color.Warning,
+            CategorieProdus.Servicii => Color.Secondary,
+            _ => Color.Info
+        };
+    }
+
+    private static string NumeUMOferta(UnitateMasura um) => um switch
+    {
+        UnitateMasura.Bucata => "buc",
+        UnitateMasura.Set => "set",
+        UnitateMasura.Foaie => "foaie",
+        UnitateMasura.MetruLiniar => "ml",
+        UnitateMasura.MetruPatrat => "m²",
+        UnitateMasura.Kilogram => "kg",
+        UnitateMasura.Litru => "l",
+        UnitateMasura.Ora => "oră",
+        UnitateMasura.Zi => "zi",
+        UnitateMasura.Lucrare => "lucrare",
+        UnitateMasura.Transport => "transport",
+        UnitateMasura.Procent => "%",
+        _ => um.ToString()
+    };
+
+    private async Task DeschideDialogAdaugaCheltuiala()
+    {
+        var parametri = new DialogParameters { ["ProiectId"] = ProiectId };
+        var optiuni = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<AdaugaCheltuialaDialog>("Adaugă cheltuială", parametri);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false })
+        {
+            _cheltuieli = (await CheltuialaService.ObtineCheltuieliDupaProiectAsync(ProiectId)).ToList();
+        }
+    }
+
+    private async Task DeschideDialogDetaliiCheltuiala(Guid id)
+    {
+        var parametri = new DialogParameters
+        {
+            ["CheltuialaId"] = id,
+            ["ProiectNume"] = _proiect?.Nume,
+            ["ProiectCod"] = _proiect?.CodProiect
+        };
+        var dialog = await DialogService.ShowAsync<CheltuialaDetaliiDialog>("Detalii cheltuială", parametri);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false, Data: "editeaza" })
+        {
+            var cheltuiala = await CheltuialaService.ObtineCheltuialaDupaIdAsync(id);
+            if (cheltuiala is not null)
+            {
+                await DeschideDialogEditeazaCheltuiala(cheltuiala);
+            }
+        }
+    }
+
+    private async Task DeschideDialogToateFacturile()
+    {
+        var facturi = (_cheltuieli ?? new List<CheltuialaDto>())
+            .Where(c => !string.IsNullOrWhiteSpace(c.NumarFactura))
+            .OrderByDescending(c => c.Data)
+            .ToList();
+
+        var parametri = new DialogParameters
+        {
+            ["Facturi"] = facturi,
+            ["ProiectNume"] = _proiect?.Nume,
+            ["ProiectCod"] = _proiect?.CodProiect
+        };
+        await DialogService.ShowAsync<ToateFacturileDialog>("Toate facturile", parametri,
+            new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true });
+    }
+
+    private async Task DeschideDialogEditeazaCheltuiala(CheltuialaDto cheltuiala)
+    {
+        var parametri = new DialogParameters { ["ProiectId"] = ProiectId, ["CheltuialaDeEditat"] = cheltuiala };
+        var optiuni = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<AdaugaCheltuialaDialog>("Editează cheltuială", parametri, optiuni);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false })
+        {
+            _cheltuieli = (await CheltuialaService.ObtineCheltuieliDupaProiectAsync(ProiectId)).ToList();
+        }
+    }
+
+    private async Task MarcheazaCaPlatita(Guid id)
+    {
+        await CheltuialaService.MarcheazaCaPlatitaAsync(id);
+        _cheltuieli = (await CheltuialaService.ObtineCheltuieliDupaProiectAsync(ProiectId)).ToList();
+    }
+
+    private async Task DuplicaCheltuiala(Guid id)
+    {
+        await CheltuialaService.DuplicaCheltuialaAsync(id);
+        _cheltuieli = (await CheltuialaService.ObtineCheltuieliDupaProiectAsync(ProiectId)).ToList();
+    }
+
+    private bool _seSincronizeaza;
+    private bool _aratArandurileModificate;
+
+    private async Task SincronizeazaMateriale()
+    {
+        _seSincronizeaza = true;
+        await OfertaService.SincronizeazaLiniiAutomateAsync(ProiectId);
+        _liniiOferta = (await OfertaService.ObtineLiniiAsync(ProiectId)).ToList();
+        _rezumatOferta = await OfertaService.ObtineRezumatAsync(ProiectId);
+        _seSincronizeaza = false;
+    }
+
+    private List<LinieOfertaDto> LiniiCuPretModificat =>
+        (_liniiOferta ?? new List<LinieOfertaDto>())
+            .Where(l => l.PretCurentCatalog.HasValue && l.PretCurentCatalog.Value != l.PretVanzare)
+            .ToList();
+
+    private async Task StergeCheltuiala(Guid id)
+    {
+        var parametri = new DialogParameters
+        {
+            ["Mesaj"] = "Ești sigur? Această acțiune nu poate fi anulată.",
+            ["TextConfirmare"] = "Șterge"
+        };
+        var dialog = await DialogService.ShowAsync<ConfirmareDialog>("Șterge cheltuiala", parametri);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false })
+        {
+            await CheltuialaService.StergeCheltuialaAsync(id);
+            _cheltuieli = (await CheltuialaService.ObtineCheltuieliDupaProiectAsync(ProiectId)).ToList();
+        }
+    }
+
+    private async Task DeschideDialogPlanTaiere(CalculMaterialDto? calcul)
+    {
+        if (calcul is null || string.IsNullOrWhiteSpace(calcul.LayoutJson) ||
+            !calcul.LungimeFoaieMm.HasValue || !calcul.LatimeFoaieMm.HasValue)
+        {
+            return;
+        }
+
+        var parametri = new DialogParameters
+        {
+            ["LayoutJson"] = calcul.LayoutJson,
+            ["LungimePlaca"] = calcul.LungimeFoaieMm.Value,
+            ["LatimePlaca"] = calcul.LatimeFoaieMm.Value
+        };
+        await DialogService.ShowAsync<PlanTaiereDialog>($"Plan tăiere — {calcul.MaterialNume}", parametri,
+            new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
+    }
+
+    private bool FiltruCheltuieli(CheltuialaDto c)
+    {
+        if (!string.IsNullOrWhiteSpace(_cautareCheltuieli))
+        {
+            var termen = _cautareCheltuieli.Trim();
+            var gasit = c.Descriere.Contains(termen, StringComparison.OrdinalIgnoreCase)
+                || (c.FurnizorNume?.Contains(termen, StringComparison.OrdinalIgnoreCase) ?? false)
+                || (c.NumarFactura?.Contains(termen, StringComparison.OrdinalIgnoreCase) ?? false)
+                || NumeCategorieScurt(c.Categorie).Contains(termen, StringComparison.OrdinalIgnoreCase)
+                || c.Total.ToString("0.##").Contains(termen, StringComparison.OrdinalIgnoreCase);
+
+            if (!gasit) return false;
+        }
+
+        if (_filtruCategorie.HasValue && c.Categorie != _filtruCategorie.Value) return false;
+        if (_filtruFurnizorId.HasValue && c.FurnizorId != _filtruFurnizorId.Value) return false;
+
+        if (!string.IsNullOrWhiteSpace(_filtruStatus))
+        {
+            var potriveste = _filtruStatus switch
+            {
+                "Ciorna" => c.Status == StatusCheltuiala.Ciorna,
+                "Platita" => c.Status == StatusCheltuiala.Confirmata && c.StatusPlata == StatusPlata.Platita,
+                "InAsteptare" => c.Status == StatusCheltuiala.Confirmata && c.StatusPlata == StatusPlata.InAsteptare,
+                _ => true
+            };
+            if (!potriveste) return false;
+        }
+
+        if (_filtruDataDeLa.HasValue && c.Data.Date < _filtruDataDeLa.Value.Date) return false;
+        if (_filtruDataPanaLa.HasValue && c.Data.Date > _filtruDataPanaLa.Value.Date) return false;
+
+        if (_filtruAreTva.HasValue)
+        {
+            var areTva = c.Tva > 0;
+            if (areTva != _filtruAreTva.Value) return false;
+        }
+
+        if (_filtruAreFactura.HasValue)
+        {
+            var areFactura = !string.IsNullOrWhiteSpace(c.NumarFactura);
+            if (areFactura != _filtruAreFactura.Value) return false;
+        }
+
+        if (_filtruMetodaPlata.HasValue && c.MetodaPlata != _filtruMetodaPlata.Value) return false;
+
+        return true;
+    }
+
+    private void ResetareFiltreCheltuieli()
+    {
+        _cautareCheltuieli = string.Empty;
+        _filtruCategorie = null;
+        _filtruFurnizorId = null;
+        _filtruStatus = null;
+        _filtruDataDeLa = null;
+        _filtruDataPanaLa = null;
+        _filtruAreTva = null;
+        _filtruAreFactura = null;
+        _filtruMetodaPlata = null;
+    }
+
+    private static string FormateazaDataScurta(DateTime data) =>
+        data.ToString("dd MMM yyyy", CultureInfo.GetCultureInfo("ro-RO"));
+
+    private static string NumeCategorieScurt(CategorieCheltuiala categorie) => categorie switch
+    {
+        CategorieCheltuiala.Materiale => "Materiale",
+        CategorieCheltuiala.Servicii => "Servicii",
+        CategorieCheltuiala.AlteCheltuieli => "Alte cheltuieli",
+        _ => categorie.ToString()
+    };
+
+    private static Color CuloareCategorie(CategorieCheltuiala categorie) => categorie switch
+    {
+        CategorieCheltuiala.Materiale => Color.Info,
+        CategorieCheltuiala.Servicii => Color.Secondary,
+        CategorieCheltuiala.AlteCheltuieli => Color.Warning,
+        _ => Color.Default
+    };
+
+    private bool _seRecalculeaza;
+
+    private async Task RecalculeazaMateriale()
+    {
+        _seRecalculeaza = true;
+        await CalculMaterialService.RecalculeazaAsync(ProiectId);
+        _calcule = (await CalculMaterialService.ObtineCalculeAsync(ProiectId)).ToList();
+        _seRecalculeaza = false;
+    }
+
+    private int TotalFoiEstimate => _calcule?.Sum(c => c.FoiEstimate) ?? 0;
+
+    private decimal? PierdereMedie
+    {
+        get
+        {
+            var cuUtilizare = _calcule?.Where(c => c.UtilizareProcent > 0).ToList();
+            if (cuUtilizare is null || cuUtilizare.Count == 0) return null;
+            return cuUtilizare.Average(c => c.PierdereProcent);
+        }
+    }
+
+    private int NumarProbleme =>
+        PieseFaraMaterial
+        + (_calcule?.Count(c => !string.IsNullOrWhiteSpace(c.Erori)) ?? 0)
+        + (_calcule?.Count(c => c.Status == StatusCalculMaterial.NecesitaRecalculare) ?? 0);
+
+    private record GrupCant(string Nume, decimal NecesarMl, decimal OfertaMl, decimal? PretUnitar, decimal? Total);
+
+    private List<GrupCant> GrupuriCant
+    {
+        get
+        {
+            return (_piese ?? new List<PiesaDto>())
+                .Where(p => p.TotalCantMl > 0)
+                .GroupBy(p => new { p.MaterialCantProdusId, Nume = p.MaterialCantNume ?? "Fără material cant" })
+                .Select(g =>
+                {
+                    var necesar = g.Sum(p => p.TotalCantMl);
+                    var oferta = Math.Ceiling(necesar * 1.05m / 5m) * 5m;
+                    decimal? pret = null;
+                    if (g.Key.MaterialCantProdusId.HasValue &&
+                        _produseCatalog.TryGetValue(g.Key.MaterialCantProdusId.Value, out var produs))
+                    {
+                        pret = produs.PretCalcul ?? produs.PretAchizitie;
+                    }
+                    return new GrupCant(g.Key.Nume, necesar, oferta, pret, pret.HasValue ? oferta * pret.Value : null);
+                })
+                .OrderByDescending(g => g.NecesarMl)
+                .ToList();
+        }
+    }
+
+    private record AlertaMaterial(string Mesaj, Severity Severitate);
+
+    private List<AlertaMaterial> AlerteMateriale
+    {
+        get
+        {
+            var alerte = new List<AlertaMaterial>();
+
+            if (PieseFaraMaterial > 0)
+            {
+                alerte.Add(new($"{PieseFaraMaterial} piese nu au material selectat. Verifică în tab-ul Piese.", Severity.Warning));
+            }
+
+            foreach (var calcul in (_calcule ?? new List<CalculMaterialDto>()).Where(c => !string.IsNullOrWhiteSpace(c.Erori)))
+            {
+                alerte.Add(new($"{calcul.MaterialNume}: {calcul.Erori}", Severity.Error));
+            }
+
+            if ((_calcule ?? new List<CalculMaterialDto>()).Any(c => c.Status == StatusCalculMaterial.NecesitaRecalculare))
+            {
+                alerte.Add(new("Lista pieselor a fost modificată. Recalculează materialele.", Severity.Info));
+            }
+
+            return alerte;
+        }
+    }
+
+    private static string NumeStatusCalcul(StatusCalculMaterial status) => status switch
+    {
+        StatusCalculMaterial.Neprocesat => "Neprocesat",
+        StatusCalculMaterial.CalculatPeSuprafata => "Calculat pe suprafață",
+        StatusCalculMaterial.Optimizat => "Optimizat",
+        StatusCalculMaterial.NecesitaRecalculare => "Necesită recalculare",
+        StatusCalculMaterial.CuErori => "Cu erori",
+        _ => status.ToString()
+    };
+
+    private static Color CuloareStatusCalcul(StatusCalculMaterial status) => status switch
+    {
+        StatusCalculMaterial.Optimizat => Color.Success,
+        StatusCalculMaterial.NecesitaRecalculare => Color.Warning,
+        StatusCalculMaterial.CuErori => Color.Error,
+        _ => Color.Default
+    };
+
+    private async Task DeschideDialogRezumatCheltuieli()
+    {
+        var parametri = new DialogParameters
+        {
+            ["Cheltuieli"] = _cheltuieli ?? new List<CheltuialaDto>(),
+            ["ValoareProiect"] = _proiect?.Valoare ?? 0
+        };
+        await DialogService.ShowAsync<RezumatCheltuieliDialog>("Rezumat cheltuieli", parametri,
+            new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
+    }
+
+    private async Task DeschideDialogDetaliiCategorie(CategorieCheltuiala categorie)
+    {
+        var parametri = new DialogParameters
+        {
+            ["Categorie"] = categorie,
+            ["Cheltuieli"] = _cheltuieli ?? new List<CheltuialaDto>()
+        };
+        var titlu = $"Detalii cheltuieli {NumeCategorieScurt(categorie).ToLowerInvariant()}";
+        await DialogService.ShowAsync<DetaliiCategorieRaportDialog>(titlu, parametri,
+            new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
+    }
+
+    private decimal TotalCheltuieli => _cheltuieli?.Where(c => c.Status == StatusCheltuiala.Confirmata).Sum(c => c.Total) ?? 0;
+
+    private const decimal RaycaDonut = 70m;
+    private static decimal Circumference => 2m * (decimal)Math.PI * RaycaDonut;
+    private static string CircumferenceStr => Circumference.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static string ArcLength(decimal procent) =>
+        (Circumference * procent / 100m).ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static string ArcOffset(decimal cumulativProcent) =>
+        (-(Circumference * cumulativProcent / 100m)).ToString("0.##", CultureInfo.InvariantCulture);
+
+    private record SegmentDonut(CategorieCheltuiala Categorie, string Nume, decimal Suma, decimal Procent, string Culoare);
+
+    private List<SegmentDonut> SegmenteDonut
+    {
+        get
+        {
+            var total = TotalCheltuieli;
+            if (total <= 0) return new List<SegmentDonut>();
+
+            return new List<SegmentDonut>
+            {
+                new(CategorieCheltuiala.Materiale, "Materiale", TotalMateriale, TotalMateriale / total * 100, "#42A5F5"),
+                new(CategorieCheltuiala.Servicii, "Servicii", TotalServicii, TotalServicii / total * 100, "#AB47BC"),
+                new(CategorieCheltuiala.AlteCheltuieli, "Alte cheltuieli", TotalAlteCheltuieli, TotalAlteCheltuieli / total * 100, "#FFA726")
+            };
+        }
+    }
+
+    private void FiltreazaDupaCategorieDinDonut(CategorieCheltuiala categorie)
+    {
+        _filtruCategorie = categorie;
+    }
+
+    private async Task DeschideDialogRaportCategorii()
+    {
+        var parametri = new DialogParameters { ["Cheltuieli"] = _cheltuieli ?? new List<CheltuialaDto>() };
+        await DialogService.ShowAsync<RaportCategoriiCheltuieliDialog>("Raport categorii cheltuieli", parametri);
+    }
+
+    private decimal CheltuitDinBuget =>
+        _cheltuieli?.Where(c => c.Status == StatusCheltuiala.Confirmata && c.IncludeInBuget).Sum(c => c.Total) ?? 0;
+
+    private decimal? Disponibil =>
+        _proiect?.BugetAlocat.HasValue == true ? _proiect.BugetAlocat.Value - CheltuitDinBuget : null;
+
+    private decimal? ProcentConsumat =>
+        _proiect?.BugetAlocat is > 0 ? CheltuitDinBuget / _proiect.BugetAlocat.Value * 100 : null;
+
+    private Color CuloareConsumBuget()
+    {
+        if (!ProcentConsumat.HasValue) return Color.Default;
+        if (ProcentConsumat.Value > 90) return Color.Error;
+        if (ProcentConsumat.Value >= 70) return Color.Warning;
+        return Color.Success;
+    }
+
+    private async Task DeschideDialogDetaliiBuget()
+    {
+        if (_proiect?.BugetAlocat is null) return;
+
+        var parametri = new DialogParameters
+        {
+            ["BugetAlocat"] = _proiect.BugetAlocat.Value,
+            ["Cheltuit"] = CheltuitDinBuget,
+            ["Disponibil"] = Disponibil ?? 0,
+            ["Procent"] = ProcentConsumat ?? 0
+        };
+        await DialogService.ShowAsync<DetaliiBugetDialog>("Detalii buget", parametri);
+    }
+
+    private List<(string Mesaj, Severitate Severitate)> AlerteCheltuieliTab
+    {
+        get
+        {
+            var alerte = new List<(string, Severitate)>();
+
+            if (ProcentConsumat.HasValue)
+            {
+                if (ProcentConsumat.Value > 100)
+                {
+                    alerte.Add(($"Cheltuielile au depășit bugetul alocat cu {ProcentConsumat.Value - 100:0.#}%.", Severitate.Critica));
+                }
+                else if (ProcentConsumat.Value >= 85)
+                {
+                    alerte.Add(($"Cheltuielile au depășit {ProcentConsumat.Value:0.#}% din bugetul alocat.", Severitate.Atentionare));
+                }
+            }
+
+            var facturiDuplicate = (_cheltuieli ?? new List<CheltuialaDto>())
+                .Where(c => !string.IsNullOrWhiteSpace(c.NumarFactura))
+                .GroupBy(c => c.NumarFactura)
+                .Where(g => g.Count() > 1);
+
+            foreach (var grup in facturiDuplicate)
+            {
+                alerte.Add(($"Numărul de factură „{grup.Key}\" apare de {grup.Count()} ori.", Severitate.Atentionare));
+            }
+
+            var numarCiorne = (_cheltuieli ?? new List<CheltuialaDto>()).Count(c => c.Status == StatusCheltuiala.Ciorna);
+            if (numarCiorne > 0)
+            {
+                alerte.Add(($"{numarCiorne} cheltuieli neconfirmate (ciorne) așteaptă revizuire.", Severitate.Info));
+            }
+
+            return alerte;
+        }
+    }
+
+    private async Task DeschideDialogToateAlerteleCheltuieli()
+    {
+        var alerteMapate = AlerteCheltuieliTab.Select(a => (a.Mesaj, SeveritateMud(a.Severitate))).ToList();
+        var parametri = new DialogParameters { ["Alerte"] = alerteMapate };
+        await DialogService.ShowAsync<ToateAlerteleCheltuieliDialog>("Toate alertele", parametri);
+    }
+
+    private IEnumerable<CheltuialaDto> FacturiRecente =>
+        (_cheltuieli ?? new List<CheltuialaDto>())
+            .Where(c => !string.IsNullOrWhiteSpace(c.NumarFactura))
+            .OrderByDescending(c => c.Data)
+            .Take(4);
+
+    private string ProcentDinValoare
+    {
+        get
+        {
+            if (_proiect is null || _proiect.Valoare <= 0) return "0";
+            return (TotalCheltuieli / _proiect.Valoare * 100).ToString("0.#");
+        }
+    }
+
+    private decimal TotalMateriale => SumaPeCategorie(CategorieCheltuiala.Materiale);
+    private decimal TotalServicii => SumaPeCategorie(CategorieCheltuiala.Servicii);
+    private decimal TotalAlteCheltuieli => SumaPeCategorie(CategorieCheltuiala.AlteCheltuieli);
+
+    private decimal SumaPeCategorie(CategorieCheltuiala categorie) =>
+        _cheltuieli?.Where(c => c.Status == StatusCheltuiala.Confirmata && c.Categorie == categorie).Sum(c => c.Total) ?? 0;
+
+    private string ProcentMateriale => ProcentDinTotalCheltuieli(TotalMateriale);
+    private string ProcentServicii => ProcentDinTotalCheltuieli(TotalServicii);
+    private string ProcentAlteCheltuieli => ProcentDinTotalCheltuieli(TotalAlteCheltuieli);
+
+    private string ProcentDinTotalCheltuieli(decimal suma)
+    {
+        if (TotalCheltuieli <= 0) return "0";
+        return (suma / TotalCheltuieli * 100).ToString("0.#");
+    }
+
+    private async Task DeschideDialogToateSpatiile()
+    {
+        var parametri = new DialogParameters { ["ProiectId"] = ProiectId };
+        var dialog = await DialogService.ShowAsync<ToateSpatiileDialog>("Toate spațiile", parametri,
+            new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true });
+        await dialog.Result;
+
+        _spatii = (await ProiectService.ObtineSpatiiDupaProiectAsync(ProiectId)).ToList();
+    }
+
+    private async Task DeschideDialogAdaugaNotaInterna()
+    {
+        var parametri = new DialogParameters { ["ProiectId"] = ProiectId };
+        var dialog = await DialogService.ShowAsync<AdaugaNotaInternaDialog>("Adaugă notă internă", parametri);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false })
+        {
+            _noteInterne = (await ProiectService.ObtineNoteInterneDupaProiectAsync(ProiectId)).ToList();
+            _activitateRecenta = (await ProiectService.ObtineActivitateRecentaAsync(ProiectId, 5)).ToList();
+        }
+    }
+
+    private async Task DeschideDialogEditeazaNotaInterna(NotaInternaDto nota)
+    {
+        var parametri = new DialogParameters { ["ProiectId"] = ProiectId, ["NotaDeEditat"] = nota };
+        var dialog = await DialogService.ShowAsync<AdaugaNotaInternaDialog>("Editează notă", parametri);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false })
+        {
+            _noteInterne = (await ProiectService.ObtineNoteInterneDupaProiectAsync(ProiectId)).ToList();
+            _activitateRecenta = (await ProiectService.ObtineActivitateRecentaAsync(ProiectId, 5)).ToList();
+        }
+    }
+
+    private async Task ComutaFixareNota(Guid notaId)
+    {
+        await ProiectService.ComutaFixareNotaAsync(notaId);
+        _noteInterne = (await ProiectService.ObtineNoteInterneDupaProiectAsync(ProiectId)).ToList();
+    }
+
+    private async Task ComutaRezolvareNota(Guid notaId)
+    {
+        await ProiectService.ComutaRezolvareNotaAsync(notaId);
+        _noteInterne = (await ProiectService.ObtineNoteInterneDupaProiectAsync(ProiectId)).ToList();
+    }
+
+    private async Task DeschideDialogUrmatorulPas()
+    {
+        if (_proiect is null) return;
+
+        var parametri = new DialogParameters
+        {
+            ["ProiectId"] = ProiectId,
+            ["DescriereActuala"] = _proiect.DescriereUrmatorulPas,
+            ["TermenActual"] = _proiect.TermenUrmatorulPas
+        };
+        var dialog = await DialogService.ShowAsync<EditeazaUrmatorulPasDialog>("Următorul pas", parametri);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false })
+        {
+            await IncarcaProiect();
+        }
+    }
+
+    private async Task FinalizeazaUrmatorulPas()
+    {
+        await ProiectService.FinalizeazaUrmatorulPasAsync(ProiectId);
+        await IncarcaProiect();
+    }
+
+    private async Task DeschideDialogToataActivitatea()
+    {
+        var parametri = new DialogParameters { ["ProiectId"] = ProiectId };
+        await DialogService.ShowAsync<ToateActivitatileDialog>("Toată activitatea", parametri,
+            new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true });
+    }
+
+    private bool AreDateMontajGoale() =>
+        _proiect is not null &&
+        string.IsNullOrWhiteSpace(_proiect.AdresaMontaj) &&
+        string.IsNullOrWhiteSpace(_proiect.Etaj) &&
+        !_proiect.AreLift.HasValue &&
+        string.IsNullOrWhiteSpace(_proiect.AccesAuto) &&
+        string.IsNullOrWhiteSpace(_proiect.LocParcare) &&
+        string.IsNullOrWhiteSpace(_proiect.PersoanaContactMontaj) &&
+        string.IsNullOrWhiteSpace(_proiect.IntervalOrarPreferat) &&
+        string.IsNullOrWhiteSpace(_proiect.ObservatiiTransport);
+
+    private static string StilNota(NotaInternaDto nota) =>
+        nota.EsteFixata
+            ? "border: 1px solid var(--mud-palette-warning); border-radius: 8px;"
+            : "border: 1px solid var(--mud-palette-lines-default); border-radius: 8px;";
+
+    private string LinkHartaClient =>
+        $"https://www.google.com/maps/search/?api=1&query={Uri.EscapeDataString(_proiect?.ClientLocalitate ?? string.Empty)}";
+
+    private static string FormateazaLei(decimal valoare) => $"{valoare:N0} lei";
+
+    private static string FormateazaSuprafata(decimal suprafata) => $"{suprafata:0.##} m²";
+
+    private static string FormateazaDataLunga(DateTime data) =>
+        data.ToString("dd MMMM yyyy", CultureInfo.GetCultureInfo("ro-RO"));
+
+    private static string FormateazaDataOra(DateTime data) =>
+        data.ToLocalTime().ToString("dd MMM yyyy, HH:mm", CultureInfo.GetCultureInfo("ro-RO"));
+
+    private (string Text, Color Culoare) InfoTermenLimita()
+    {
+        if (_proiect?.TermenLimita is null)
+            return ("Fără termen limită setat", Color.Default);
+
+        var zile = (_proiect.TermenLimita.Value.Date - DateTime.Today).Days;
+
+        if (zile < 0)
+            return ($"Termen depășit cu {-zile} zile", Color.Error);
+        if (zile <= 7)
+            return ($"Mai sunt {zile} zile", Color.Warning);
+
+        return ($"Mai sunt {zile} zile", Color.Success);
+    }
+
+    private static string NumeTipPrincipal(TipPrincipalProiect tip) => tip switch
+    {
+        TipPrincipalProiect.Bucatarie => "Bucătărie",
+        TipPrincipalProiect.Dressing => "Dressing",
+        TipPrincipalProiect.MobilierBaie => "Mobilier baie",
+        TipPrincipalProiect.Living => "Living",
+        TipPrincipalProiect.Dormitor => "Dormitor",
+        TipPrincipalProiect.Birou => "Birou",
+        TipPrincipalProiect.MobilierComercial => "Mobilier comercial",
+        TipPrincipalProiect.AltTip => "Alt tip",
+        _ => tip.ToString()
+    };
+
+    private static Color CuloareStatus(StatusProiect status) => status switch
+    {
+        StatusProiect.OfertaTrimisa => Color.Info,
+        StatusProiect.Masuratori => Color.Warning,
+        StatusProiect.Proiectare => Color.Info,
+        StatusProiect.InProductie => Color.Warning,
+        StatusProiect.LaMontaj => Color.Primary,
+        StatusProiect.Finalizat => Color.Success,
+        _ => Color.Default
+    };
+
+    private static string NumeStatus(StatusProiect status) => status switch
+    {
+        StatusProiect.OfertaTrimisa => "Ofertă trimisă",
+        StatusProiect.Masuratori => "Măsurători",
+        StatusProiect.Proiectare => "Proiectare",
+        StatusProiect.InProductie => "În producție",
+        StatusProiect.LaMontaj => "La montaj",
+        StatusProiect.Finalizat => "Finalizat",
+        _ => status.ToString()
+    };
+
+    private static Severity SeveritateMud(Severitate severitate) => severitate switch
+    {
+        Severitate.Info => Severity.Info,
+        Severitate.Atentionare => Severity.Warning,
+        Severitate.Critica => Severity.Error,
+        _ => Severity.Info
+    };
+}

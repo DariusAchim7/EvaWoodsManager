@@ -1,0 +1,69 @@
+@using EvaWoods.Application.Cheltuieli
+@using EvaWoods.Domain.Cheltuieli
+@inject IDialogService DialogService
+
+<MudDialog>
+    <DialogContent>
+        @if (Facturi.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">Nicio factură înregistrată încă pentru acest proiect.</MudAlert>
+        }
+        else
+        {
+            <MudTable Items="@Facturi" Hover="true" Dense="true">
+                <HeaderContent>
+                    <MudTh>Factură</MudTh>
+                    <MudTh>Furnizor</MudTh>
+                    <MudTh>Data</MudTh>
+                    <MudTh>Total</MudTh>
+                    <MudTh>Status</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Factură">
+                        <MudLink Style="cursor: pointer;" @onclick="@(() => DeschideDetalii(context.Id))">@context.NumarFactura</MudLink>
+                    </MudTd>
+                    <MudTd DataLabel="Furnizor">@(context.FurnizorNume ?? "-")</MudTd>
+                    <MudTd DataLabel="Data">@context.Data.ToString("dd MMM yyyy")</MudTd>
+                    <MudTd DataLabel="Total">@($"{context.Total:N2} lei")</MudTd>
+                    <MudTd DataLabel="Status">
+                        @if (context.Status == StatusCheltuiala.Ciorna)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Default">Ciornă</MudChip>
+                        }
+                        else if (context.StatusPlata == StatusPlata.Platita)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success">Plătită</MudChip>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning">În așteptare</MudChip>
+                        }
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Inchide">Închide</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public List<CheltuialaDto> Facturi { get; set; } = new();
+    [Parameter] public string? ProiectNume { get; set; }
+    [Parameter] public string? ProiectCod { get; set; }
+
+    private async Task DeschideDetalii(Guid id)
+    {
+        var parametri = new DialogParameters
+        {
+            ["CheltuialaId"] = id,
+            ["ProiectNume"] = ProiectNume,
+            ["ProiectCod"] = ProiectCod
+        };
+        await DialogService.ShowAsync<CheltuialaDetaliiDialog>("Detalii cheltuială", parametri);
+    }
+
+    private void Inchide() => MudDialog.Close(DialogResult.Ok(true));
+}

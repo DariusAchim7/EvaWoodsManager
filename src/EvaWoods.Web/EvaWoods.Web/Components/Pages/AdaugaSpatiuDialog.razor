@@ -1,0 +1,63 @@
+@using EvaWoods.Application.Proiecte
+@inject IProiectService ProiectService
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model">
+            <MudTextField @bind-Value="_model.Nume" Label="Nume cameră/spațiu" Required="true" RequiredError="Numele este obligatoriu." />
+            <MudNumericField @bind-Value="_model.Suprafata" Label="Suprafață (m²)" Class="mt-3" />
+            <MudNumericField @bind-Value="_model.InaltimeMm" Label="Înălțime (mm)" Class="mt-3" />
+            <MudTextField @bind-Value="_model.Orientare" Label="Orientare" Class="mt-3" />
+            <MudTextField @bind-Value="_model.TipSpatiu" Label="Tip spațiu" Class="mt-3" />
+            <MudTextField @bind-Value="_model.StarePereti" Label="Stare pereți" Class="mt-3" />
+            <MudTextField @bind-Value="_model.StarePardoseala" Label="Stare pardoseală" Class="mt-3" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Anuleaza">Anulează</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Salveaza" Disabled="_seSalveaza">Salvează</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid ProiectId { get; set; }
+
+    private MudForm _form = default!;
+    private bool _seSalveaza;
+    private readonly ModelSpatiu _model = new();
+
+    private async Task Salveaza()
+    {
+        await _form.Validate();
+        if (!_form.IsValid) return;
+
+        _seSalveaza = true;
+
+        await ProiectService.AdaugaSpatiuAsync(new AdaugaSpatiuRequest(
+            ProiectId: ProiectId,
+            Nume: _model.Nume,
+            Suprafata: _model.Suprafata,
+            InaltimeMm: _model.InaltimeMm,
+            Orientare: _model.Orientare,
+            TipSpatiu: _model.TipSpatiu,
+            StarePereti: _model.StarePereti,
+            StarePardoseala: _model.StarePardoseala));
+
+        _seSalveaza = false;
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Anuleaza() => MudDialog.Cancel();
+
+    private class ModelSpatiu
+    {
+        public string Nume { get; set; } = string.Empty;
+        public decimal? Suprafata { get; set; }
+        public int? InaltimeMm { get; set; }
+        public string? Orientare { get; set; }
+        public string? TipSpatiu { get; set; }
+        public string? StarePereti { get; set; }
+        public string? StarePardoseala { get; set; }
+    }
+}

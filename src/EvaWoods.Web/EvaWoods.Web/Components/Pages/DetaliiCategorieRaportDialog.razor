@@ -1,0 +1,304 @@
+@using EvaWoods.Application.Cheltuieli
+@using EvaWoods.Domain.Cheltuieli
+@using System.Globalization
+
+<MudDialog Class="rezumat-cheltuieli-dialog-lat">
+    <DialogContent>
+        <MudGrid Class="mb-4">
+            <MudItem xs="6" sm="4" md="2">
+                <MudPaper Class="pa-3" Elevation="0" Style="border: 2px solid var(--mud-palette-primary); height: 100%;">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Total @NumeCategorieLower</MudText>
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold">@($"{TotalCategorie:N2} lei")</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@(ProcentDinCheltuieli(TotalCategorie))% din cheltuieli</MudText>
+                </MudPaper>
+            </MudItem>
+            @foreach (var segment in SegmenteSubcategorii.Take(3))
+            {
+                <MudItem xs="6" sm="4" md="2">
+                    <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@segment.Nume</MudText>
+                        <MudText Typo="Typo.subtitle1" Class="font-weight-bold">@($"{segment.Suma:N2} lei")</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@($"{segment.Procent:0.#}%") din @NumeCategorieLower</MudText>
+                    </MudPaper>
+                </MudItem>
+            }
+            <MudItem xs="6" sm="4" md="2">
+                <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Confirmate</MudText>
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold">@($"{SumaConfirmateCategorie:N2} lei")</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@(ProcentDinTotalCategorieGeneral(SumaConfirmateCategorie))% din total</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Neconfirmate</MudText>
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold">@($"{SumaNeconfirmateCategorie:N2} lei")</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@(ProcentDinTotalCategorieGeneral(SumaNeconfirmateCategorie))% din total</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Structura @NumeCategorieLower</MudText>
+                    @if (SegmenteSubcategorii.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio cheltuială confirmată încă în această categorie.</MudText>
+                    }
+                    else
+                    {
+                        <MudStack Spacing="2">
+                            @foreach (var segment in SegmenteSubcategorii)
+                            {
+                                <div>
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mb-1">
+                                        <MudText Typo="Typo.body2">@segment.Nume</MudText>
+                                        <MudText Typo="Typo.body2">@($"{segment.Suma:N2} lei · {segment.Procent:0.#}%")</MudText>
+                                    </MudStack>
+                                    <MudProgressLinear Color="Color.Primary" Value="@((double)segment.Procent)" Rounded="true" />
+                                </div>
+                            }
+                        </MudStack>
+                    }
+                    <MudDivider Class="my-2" />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.subtitle2">Total @NumeCategorieLower</MudText>
+                        <MudText Typo="Typo.subtitle2">@($"{TotalCategorie:N2} lei")</MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Distribuire pe subcategorii</MudText>
+                    @if (SegmenteSubcategorii.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio cheltuială confirmată încă.</MudText>
+                    }
+                    else
+                    {
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                            <svg viewBox="0 0 200 200" width="120" height="120">
+                                <circle cx="100" cy="100" r="70" fill="transparent" stroke="#e8e8e8" stroke-width="30" />
+                                @{
+                                    decimal cumulativ = 0;
+                                }
+                                @foreach (var segment in SegmenteSubcategorii)
+                                {
+                                    <circle cx="100" cy="100" r="70" fill="transparent" stroke="@segment.Culoare" stroke-width="30"
+                                            stroke-dasharray="@($"{ArcLength(segment.Procent)} {CircumferenceStr}")"
+                                            stroke-dashoffset="@ArcOffset(cumulativ)"
+                                            transform="rotate(-90 100 100)">
+                                    </circle>
+                                    cumulativ += segment.Procent;
+                                }
+                            </svg>
+                            <MudStack Spacing="1">
+                                @foreach (var segment in SegmenteSubcategorii)
+                                {
+                                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                        <div style="@($"width:10px;height:10px;border-radius:50%;background-color:{segment.Culoare};")"></div>
+                                        <MudText Typo="Typo.caption">@segment.Nume — @($"{segment.Suma:N2} lei ({segment.Procent:0.#}%)")</MudText>
+                                    </MudStack>
+                                }
+                            </MudStack>
+                        </MudStack>
+                    }
+                    <MudDivider Class="my-2" />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.subtitle2">Total @NumeCategorieLower</MudText>
+                        <MudText Typo="Typo.subtitle2">@($"{TotalCategorie:N2} lei")</MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Evoluție lunară @NumeCategorieLower</MudText>
+                    @if (!EvolutieLunaraCategorie.Any())
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio cheltuială confirmată încă.</MudText>
+                    }
+                    else
+                    {
+                        <MudStack Row="true" AlignItems="AlignItems.End" Spacing="2" Style="height: 120px;">
+                            @foreach (var luna in EvolutieLunaraCategorie)
+                            {
+                                var inaltimeProcent = MaxEvolutieCategorie > 0 ? (double)(luna.Suma / MaxEvolutieCategorie * 100) : 0;
+                                <MudStack Style="flex: 1; height: 100%;" Justify="Justify.FlexEnd" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudText Typo="Typo.caption">@($"{luna.Suma:N0}")</MudText>
+                                    <div style="@($"width: 70%; height: {inaltimeProcent}%; background-color: var(--mud-palette-primary); border-radius: 4px 4px 0 0; min-height: 2px;")"></div>
+                                </MudStack>
+                            }
+                        </MudStack>
+                        <MudStack Row="true" Spacing="2" Class="mt-1">
+                            @foreach (var luna in EvolutieLunaraCategorie)
+                            {
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary" Style="flex: 1; text-align: center;">@luna.Luna</MudText>
+                            }
+                        </MudStack>
+                    }
+                    <MudDivider Class="my-2" />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.subtitle2">Total perioadă</MudText>
+                        <MudText Typo="Typo.subtitle2">@($"{TotalCategorie:N2} lei")</MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <MudPaper Class="pa-4 mt-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Ultimele cheltuieli @NumeCategorieLower</MudText>
+
+            @if (!UltimeleCheltuieliCategorie.Any())
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio cheltuială înregistrată încă în această categorie.</MudText>
+            }
+            else
+            {
+                <MudTable Items="@UltimeleCheltuieliCategorie" Hover="true" Dense="true">
+                    <HeaderContent>
+                        <MudTh>Data</MudTh>
+                        <MudTh>Descriere</MudTh>
+                        <MudTh>Subcategorie</MudTh>
+                        <MudTh>Furnizor</MudTh>
+                        <MudTh>Total</MudTh>
+                        <MudTh>Status</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Data">@context.Data.ToString("dd MMM yyyy")</MudTd>
+                        <MudTd DataLabel="Descriere">@context.Descriere</MudTd>
+                        <MudTd DataLabel="Subcategorie">
+                            @if (!string.IsNullOrWhiteSpace(context.Subcategorie))
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Default">@context.Subcategorie</MudChip>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2" Class="mud-text-secondary">-</MudText>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Furnizor">@(context.FurnizorNume ?? "-")</MudTd>
+                        <MudTd DataLabel="Total">@($"{context.Total:N2} lei")</MudTd>
+                        <MudTd DataLabel="Status">
+                            @if (context.Status == StatusCheltuiala.Ciorna)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Default">Ciornă</MudChip>
+                            }
+                            else if (context.StatusPlata == StatusPlata.Platita)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success">Plătită</MudChip>
+                            }
+                            else
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Warning">În așteptare</MudChip>
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary mt-1">
+                    1-@(UltimeleCheltuieliCategorie.Count) din @(CheltuieliCategorie.Count()) cheltuieli @NumeCategorieLower
+                </MudText>
+            }
+        </MudPaper>
+    </DialogContent>
+    <DialogActions>
+        <MudTooltip Text="În curând">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.FileDownload" Disabled="true">
+                Exportă raportul
+            </MudButton>
+        </MudTooltip>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Inchide">Închide</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public CategorieCheltuiala Categorie { get; set; }
+    [Parameter] public List<CheltuialaDto> Cheltuieli { get; set; } = new();
+
+    private const decimal RaycaDonut = 70m;
+    private static decimal Circumference => 2m * (decimal)Math.PI * RaycaDonut;
+    private static string CircumferenceStr => Circumference.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static string ArcLength(decimal procent) =>
+        (Circumference * procent / 100m).ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static string ArcOffset(decimal cumulativProcent) =>
+        (-(Circumference * cumulativProcent / 100m)).ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static readonly string[] PaletaCuloriSubcategorii = { "#2E7D32", "#66BB6A", "#FFB300", "#42A5F5", "#AB47BC", "#BDBDBD" };
+
+    private string NumeCategorieLower => NumeCategorie(Categorie).ToLowerInvariant();
+
+    private IEnumerable<CheltuialaDto> ToateConfirmate => Cheltuieli.Where(c => c.Status == StatusCheltuiala.Confirmata);
+    private IEnumerable<CheltuialaDto> CheltuieliCategorie => Cheltuieli.Where(c => c.Categorie == Categorie);
+    private IEnumerable<CheltuialaDto> CheltuieliCategorieConfirmate => CheltuieliCategorie.Where(c => c.Status == StatusCheltuiala.Confirmata);
+    private IEnumerable<CheltuialaDto> CheltuieliCategorieNeconfirmate => CheltuieliCategorie.Where(c => c.Status == StatusCheltuiala.Ciorna);
+
+    private decimal TotalCategorie => CheltuieliCategorieConfirmate.Sum(c => c.Total);
+    private decimal TotalToateCategoriile => ToateConfirmate.Sum(c => c.Total);
+    private decimal TotalCategorieGeneral => CheltuieliCategorie.Sum(c => c.Total);
+
+    private decimal SumaConfirmateCategorie => CheltuieliCategorieConfirmate.Sum(c => c.Total);
+    private decimal SumaNeconfirmateCategorie => CheltuieliCategorieNeconfirmate.Sum(c => c.Total);
+
+    private string ProcentDinCheltuieli(decimal suma) =>
+        TotalToateCategoriile > 0 ? (suma / TotalToateCategoriile * 100).ToString("0.#") : "0";
+
+    private string ProcentDinTotalCategorieGeneral(decimal suma) =>
+        TotalCategorieGeneral > 0 ? (suma / TotalCategorieGeneral * 100).ToString("0.#") : "0";
+
+    private record SegmentSubcategorie(string Nume, decimal Suma, decimal Procent, string Culoare);
+
+    private List<SegmentSubcategorie> SegmenteSubcategorii
+    {
+        get
+        {
+            var total = TotalCategorie;
+            if (total <= 0) return new List<SegmentSubcategorie>();
+
+            var grupuri = CheltuieliCategorieConfirmate
+                .GroupBy(c => string.IsNullOrWhiteSpace(c.Subcategorie) ? "Fără subcategorie" : c.Subcategorie!)
+                .Select(g => (Nume: g.Key, Suma: g.Sum(c => c.Total)))
+                .OrderByDescending(g => g.Suma)
+                .ToList();
+
+            var rezultat = new List<SegmentSubcategorie>();
+            for (var i = 0; i < grupuri.Count; i++)
+            {
+                var culoare = PaletaCuloriSubcategorii[Math.Min(i, PaletaCuloriSubcategorii.Length - 1)];
+                rezultat.Add(new SegmentSubcategorie(grupuri[i].Nume, grupuri[i].Suma, grupuri[i].Suma / total * 100, culoare));
+            }
+
+            return rezultat;
+        }
+    }
+
+    private record LunaEvolutie(string Luna, decimal Suma);
+
+    private List<LunaEvolutie> EvolutieLunaraCategorie =>
+        CheltuieliCategorieConfirmate
+            .GroupBy(c => new { c.Data.Year, c.Data.Month })
+            .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month)
+            .Select(g => new LunaEvolutie(
+                new DateTime(g.Key.Year, g.Key.Month, 1).ToString("MMM", CultureInfo.GetCultureInfo("ro-RO")),
+                g.Sum(c => c.Total)))
+            .TakeLast(6)
+            .ToList();
+
+    private decimal MaxEvolutieCategorie => EvolutieLunaraCategorie.Any() ? EvolutieLunaraCategorie.Max(l => l.Suma) : 1;
+
+    private List<CheltuialaDto> UltimeleCheltuieliCategorie => CheltuieliCategorie.OrderByDescending(c => c.Data).Take(5).ToList();
+
+    private void Inchide() => MudDialog.Close(DialogResult.Ok(true));
+
+    private static string NumeCategorie(CategorieCheltuiala categorie) => categorie switch
+    {
+        CategorieCheltuiala.Materiale => "Materiale",
+        CategorieCheltuiala.Servicii => "Servicii",
+        CategorieCheltuiala.AlteCheltuieli => "Alte cheltuieli",
+        _ => categorie.ToString()
+    };
+}

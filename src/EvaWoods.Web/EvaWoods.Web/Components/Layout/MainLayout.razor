@@ -1,0 +1,40 @@
+﻿@inherits LayoutComponentBase
+@using EvaWoods.Web.Theme
+
+<MudThemeProvider Theme="_theme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="0">
+        <MudText Typo="Typo.h6">Bună ziua, Darius! 👋</MudText>
+        <MudSpacer />
+        <MudTextField T="string" Placeholder="Caută proiecte, clienți, documente..."
+                       Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                       Margin="Margin.Dense" Variant="Variant.Outlined"
+                       Style="max-width: 340px;" Class="mr-4" />
+        <MudBadge Content="3" Color="Color.Error" Overlap="true" Class="mr-4">
+            <MudIconButton Icon="@Icons.Material.Filled.Notifications" />
+        </MudBadge>
+        <MudIconButton Icon="@Icons.Material.Filled.LightMode" />
+    </MudAppBar>
+
+    <MudDrawer Open="true" Elevation="0" Variant="DrawerVariant.Persistent">
+        <NavMenu />
+    </MudDrawer>
+
+    <MudMainContent Class="pa-6">
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    private readonly EvaWoodsTheme _theme = new();
+}

@@ -1,0 +1,34 @@
+@using EvaWoods.Application.Piese
+@inject IPiesaService PiesaService
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="_nume" Label="Nume corp" Placeholder="Ex: Corp chiuvetă, Corp suspendat 80..."
+                      Required="true" RequiredError="Numele este obligatoriu." />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Anuleaza">Anulează</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Salveaza" Disabled="_seSalveaza">Salvează</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid ProiectId { get; set; }
+
+    private string _nume = string.Empty;
+    private bool _seSalveaza;
+
+    private async Task Salveaza()
+    {
+        if (string.IsNullOrWhiteSpace(_nume)) return;
+
+        _seSalveaza = true;
+        var id = await PiesaService.AdaugaCorpAsync(ProiectId, _nume);
+        _seSalveaza = false;
+
+        MudDialog.Close(DialogResult.Ok(new CorpProiectDto(id, _nume)));
+    }
+
+    private void Anuleaza() => MudDialog.Cancel();
+}

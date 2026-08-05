@@ -1,0 +1,301 @@
+@page "/clienti"
+@using EvaWoods.Application.Clienti
+@using EvaWoods.Application.Proiecte
+@using EvaWoods.Domain.Clienti
+@using EvaWoods.Web.Components.Shared
+@using Microsoft.AspNetCore.Components
+@inject IClientService ClientService
+@inject IProiectService ProiectService
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Clienți</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Clienți</MudText>
+<MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+    Gestionează informațiile și interacțiunile cu clienții tăi.
+</MudText>
+
+@if (!_seIncarca)
+{
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" sm="6">
+            <KpiCard Title="Total clienți" Value="@_clienti!.Count.ToString()" Icon="@Icons.Material.Filled.People" Color="Color.Primary" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <KpiCard Title="Clienți activi" Value="@ClientiActivi.ToString()" Subtitle="@ProcentActivi" Icon="@Icons.Material.Filled.TrendingUp" Color="Color.Success" />
+        </MudItem>
+    </MudGrid>
+}
+
+<MudStack Row="true" Justify="Justify.FlexEnd" Class="mb-4">
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="DeschideDialogAdaugaClient">
+        Adaugă client
+    </MudButton>
+</MudStack>
+
+<MudGrid>
+    <MudItem xs="12" md="8">
+        @if (_seIncarca)
+        {
+            <MudProgressCircular Indeterminate="true" Class="my-8" />
+        }
+        else if (_clienti is { Count: 0 })
+        {
+            <MudAlert Severity="Severity.Info">Nu ai încă niciun client. Adaugă primul client folosind butonul de mai sus.</MudAlert>
+        }
+        else
+        {
+            <MudTable Items="@_clienti" Hover="true" Dense="true" T="ClientDto"
+                      OnRowClick="@((TableRowClickEventArgs<ClientDto> e) => SelecteazaClient(e.Item))">
+                <HeaderContent>
+                    <MudTh>Client</MudTh>
+                    <MudTh>Telefon</MudTh>
+                    <MudTh>Localitate</MudTh>
+                    <MudTh>Proiecte</MudTh>
+                    <MudTh>Ultima activitate</MudTh>
+                    <MudTh>Status</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Client">
+                        <MudText Typo="Typo.body1">@context.Nume</MudText>
+                        @if (!string.IsNullOrWhiteSpace(context.Email))
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Email</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Telefon">@context.Telefon</MudTd>
+                    <MudTd DataLabel="Localitate">@context.Localitate</MudTd>
+                    <MudTd DataLabel="Proiecte">@context.NumarProiecte</MudTd>
+                    <MudTd DataLabel="Ultima activitate">@FormateazaData(context.DataUltimeiActivitati)</MudTd>
+                    <MudTd DataLabel="Status">
+                        <MudChip T="string" Color="@CuloareStatus(context.Status)" Size="Size.Small">@context.Status</MudChip>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudItem>
+
+    <MudItem xs="12" md="4">
+        @if (_clientSelectat is null)
+        {
+            <MudPaper Class="pa-6 d-flex flex-column align-center justify-center"
+                      Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%; min-height: 300px;">
+                <MudIcon Icon="@Icons.Material.Filled.PersonSearch" Size="Size.Large" Class="mb-2 mud-text-secondary" />
+                <MudText Typo="Typo.body2" Class="mud-text-secondary" Align="Align.Center">
+                    Selectează un client din listă pentru a vedea detaliile.
+                </MudText>
+            </MudPaper>
+        }
+        else
+        {
+            <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
+                    <MudAvatar Color="Color.Primary" Size="Size.Large">@Initiale(_clientSelectat.Nume)</MudAvatar>
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.h6">@_clientSelectat.Nume</MudText>
+                        <MudChip T="string" Color="@CuloareStatus(_clientSelectat.Status)" Size="Size.Small">@_clientSelectat.Status</MudChip>
+                    </MudStack>
+                </MudStack>
+
+                <MudStack Spacing="1" Class="mb-3">
+                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                        <MudIcon Icon="@Icons.Material.Filled.Phone" Size="Size.Small" Class="mud-text-secondary" />
+                        <MudText Typo="Typo.body2">@_clientSelectat.Telefon</MudText>
+                    </MudStack>
+                    @if (!string.IsNullOrWhiteSpace(_clientSelectat.Email))
+                    {
+                        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                            <MudIcon Icon="@Icons.Material.Filled.Email" Size="Size.Small" Class="mud-text-secondary" />
+                            <MudText Typo="Typo.body2">@_clientSelectat.Email</MudText>
+                        </MudStack>
+                    }
+                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                        <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Class="mud-text-secondary" />
+                        <MudText Typo="Typo.body2">@LocalitateCuJudet</MudText>
+                    </MudStack>
+                </MudStack>
+
+                <MudDivider Class="mb-3" />
+
+                <MudGrid Class="mb-3">
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.h5">@_clientSelectat.NumarProiecte</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Proiecte</MudText>
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.h5">@ValoareTotalaFormatata</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Valoare totală</MudText>
+                    </MudItem>
+                </MudGrid>
+
+                <MudDivider Class="mb-3" />
+
+                <MudText Typo="Typo.subtitle2" Class="mb-1">Notă rapidă</MudText>
+                <MudTextField T="string" @bind-Value="_notaText" Lines="3" Variant="Variant.Outlined"
+                              Placeholder="Adaugă o notă despre acest client..." />
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Class="mt-1"
+                           OnClick="SalveazaNota" Disabled="_seSalveazaNota">
+                    Salvează notă
+                </MudButton>
+
+                <MudDivider Class="my-3" />
+
+                <MudStack Spacing="2">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                            StartIcon="@Icons.Material.Filled.Add" OnClick="DeschideDialogAdaugaProiectPentruClient">
+                        Adaugă proiect
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true"
+                            StartIcon="@Icons.Material.Filled.Edit" OnClick="DeschideDialogEditeazaClient">
+                        Editează client
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" OnClick="VeziDetalii">
+                        Vezi detalii
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        }
+    </MudItem>
+</MudGrid>
+
+@code {
+    private List<ClientDto>? _clienti;
+    private bool _seIncarca = true;
+
+    private ClientDto? _clientSelectat;
+    private string _notaText = string.Empty;
+    private bool _seSalveazaNota;
+    private decimal _valoareTotalaProiecteClient;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _clienti = (await ClientService.ObtineListaClientiAsync()).ToList();
+        _seIncarca = false;
+    }
+
+    private async Task DeschideDialogAdaugaClient()
+    {
+        var dialog = await DialogService.ShowAsync<AdaugaClientDialog>("Adaugă client");
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false })
+        {
+            _clienti = (await ClientService.ObtineListaClientiAsync()).ToList();
+        }
+    }
+
+    private async Task SelecteazaClient(ClientDto client)
+    {
+        _clientSelectat = client;
+        _notaText = client.Note ?? string.Empty;
+
+        var proiecteClient = await ProiectService.ObtineProiecteDupaClientAsync(client.Id);
+        _valoareTotalaProiecteClient = proiecteClient.Sum(p => p.Valoare);
+    }
+
+    private async Task SalveazaNota()
+    {
+        if (_clientSelectat is null) return;
+
+        _seSalveazaNota = true;
+        await ClientService.AdaugaNotaAsync(_clientSelectat.Id, _notaText);
+        _seSalveazaNota = false;
+    }
+
+    private async Task DeschideDialogAdaugaProiectPentruClient()
+    {
+        if (_clientSelectat is null) return;
+
+        var parametri = new DialogParameters
+        {
+            ["ClientIdImplicit"] = _clientSelectat.Id
+        };
+
+        var dialog = await DialogService.ShowAsync<AdaugaProiectDialog>("Adaugă proiect", parametri);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false })
+        {
+            var clientIdCurent = _clientSelectat.Id;
+            _clienti = (await ClientService.ObtineListaClientiAsync()).ToList();
+
+            var clientActualizat = _clienti.FirstOrDefault(c => c.Id == clientIdCurent);
+            if (clientActualizat is not null)
+            {
+                await SelecteazaClient(clientActualizat);
+            }
+        }
+    }
+
+    private async Task DeschideDialogEditeazaClient()
+    {
+        if (_clientSelectat is null) return;
+
+        var parametri = new DialogParameters
+        {
+            ["ClientDeEditat"] = _clientSelectat
+        };
+
+        var dialog = await DialogService.ShowAsync<AdaugaClientDialog>("Editează client", parametri);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false })
+        {
+            var clientIdCurent = _clientSelectat.Id;
+            _clienti = (await ClientService.ObtineListaClientiAsync()).ToList();
+
+            var clientActualizat = _clienti.FirstOrDefault(c => c.Id == clientIdCurent);
+            if (clientActualizat is not null)
+            {
+                await SelecteazaClient(clientActualizat);
+            }
+        }
+    }
+
+    private void VeziDetalii()
+    {
+        if (_clientSelectat is null) return;
+        NavigationManager.NavigateTo($"/clienti/{_clientSelectat.Id}");
+    }
+
+    private string LocalitateCuJudet =>
+        string.IsNullOrWhiteSpace(_clientSelectat?.Judet)
+            ? _clientSelectat?.Localitate ?? string.Empty
+            : $"{_clientSelectat.Localitate}, jud. {_clientSelectat.Judet}";
+
+    private string ValoareTotalaFormatata => $"{_valoareTotalaProiecteClient:N0} lei";
+
+    private static string FormateazaData(DateTime? data) => data?.ToString("dd MMM yyyy") ?? "-";
+
+    private static string Initiale(string nume)
+    {
+        var parti = nume.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parti.Length switch
+        {
+            0 => "?",
+            1 => parti[0][..Math.Min(2, parti[0].Length)].ToUpperInvariant(),
+            _ => $"{parti[0][0]}{parti[^1][0]}".ToUpperInvariant()
+        };
+    }
+
+    private int ClientiActivi => _clienti?.Count(c => c.Status == StatusClient.Activ) ?? 0;
+
+    private string ProcentActivi
+    {
+        get
+        {
+            if (_clienti is null || _clienti.Count == 0) return "0% din total clienți";
+            var procent = (int)Math.Round(ClientiActivi * 100.0 / _clienti.Count);
+            return $"{procent}% din total clienți";
+        }
+    }
+
+    private static Color CuloareStatus(StatusClient status) => status switch
+    {
+        StatusClient.Activ => Color.Success,
+        StatusClient.Inactiv => Color.Default,
+        StatusClient.Prospect => Color.Warning,
+        _ => Color.Default
+    };
+}

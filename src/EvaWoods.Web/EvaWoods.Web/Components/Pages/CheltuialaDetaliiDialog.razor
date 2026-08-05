@@ -1,0 +1,194 @@
+@using EvaWoods.Application.Cheltuieli
+@using EvaWoods.Domain.Cheltuieli
+@using System.Globalization
+@inject ICheltuialaService CheltuialaService
+
+<MudDialog>
+    <DialogContent>
+        @if (_cheltuiala is null)
+        {
+            <MudProgressCircular Indeterminate="true" />
+        }
+        else
+        {
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start" Class="mb-3">
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                    <MudAvatar Color="@CuloareCategorie(_cheltuiala.Categorie)" Variant="Variant.Filled" Size="Size.Medium">
+                        <MudIcon Icon="@IconaCategorie(_cheltuiala.Categorie)" Size="Size.Small" />
+                    </MudAvatar>
+                    <div>
+                        <MudText Typo="Typo.subtitle1" Class="font-weight-bold">@_cheltuiala.Descriere</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@NumeCategorie(_cheltuiala.Categorie)</MudText>
+                    </div>
+                </MudStack>
+                <MudStack Spacing="0" Style="text-align: right;">
+                    @if (_cheltuiala.Status == StatusCheltuiala.Ciorna)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default">Ciornă</MudChip>
+                    }
+                    else if (_cheltuiala.StatusPlata == StatusPlata.Platita)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success">Plătită</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">În așteptare</MudChip>
+                    }
+                    <MudText Typo="Typo.h6" Class="font-weight-bold mt-1">@($"{_cheltuiala.Total:N2} lei")</MudText>
+                </MudStack>
+            </MudStack>
+
+            <MudStack Spacing="2">
+                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Data cheltuielii</MudText>
+                    <MudText Typo="Typo.body2">@_cheltuiala.Data.ToString("dd MMMM yyyy", CultureInfo.GetCultureInfo("ro-RO"))</MudText>
+                </MudStack>
+                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Furnizor</MudText>
+                    <MudText Typo="Typo.body2">@(_cheltuiala.FurnizorNume ?? "-")</MudText>
+                </MudStack>
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Factură</MudText>
+                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.body2">@(_cheltuiala.NumarFactura ?? "-")</MudText>
+                        @if (!string.IsNullOrWhiteSpace(_cheltuiala.NumarFactura))
+                        {
+                            <MudTooltip Text="În curând">
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Disabled="true">Vezi factura</MudChip>
+                            </MudTooltip>
+                        }
+                    </MudStack>
+                </MudStack>
+                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Categorie</MudText>
+                    <MudText Typo="Typo.body2">@CategorieCuSubcategorie</MudText>
+                </MudStack>
+                @if (!string.IsNullOrWhiteSpace(ProiectNume))
+                {
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Proiect</MudText>
+                        <MudText Typo="Typo.body2">@ProiectNume (@ProiectCod)</MudText>
+                    </MudStack>
+                }
+            </MudStack>
+
+            <MudDivider Class="my-3" />
+            <MudText Typo="Typo.subtitle2" Class="mb-1">Valori</MudText>
+            <MudStack Spacing="1">
+                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Fără TVA</MudText>
+                    <MudText Typo="Typo.body2">@($"{_cheltuiala.ValoareFaraTva:N2} lei")</MudText>
+                </MudStack>
+                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">TVA (@(_cheltuiala.ProcentTva)%)</MudText>
+                    <MudText Typo="Typo.body2">@($"{_cheltuiala.Tva:N2} lei")</MudText>
+                </MudStack>
+                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                    <MudText Typo="Typo.subtitle2">Total</MudText>
+                    <MudText Typo="Typo.subtitle2">@($"{_cheltuiala.Total:N2} lei")</MudText>
+                </MudStack>
+            </MudStack>
+
+            <MudDivider Class="my-3" />
+            <MudText Typo="Typo.subtitle2" Class="mb-1">Alocare la proiect</MudText>
+            <MudStack Spacing="1">
+                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Sumă alocată acestui proiect</MudText>
+                    <MudText Typo="Typo.body2">@($"{_cheltuiala.Total:N2} lei")</MudText>
+                </MudStack>
+                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Sumă nealocată</MudText>
+                    <MudText Typo="Typo.body2">0,00 lei</MudText>
+                </MudStack>
+            </MudStack>
+
+            <MudDivider Class="my-3" />
+            <MudText Typo="Typo.subtitle2" Class="mb-1">Plată</MudText>
+            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">Metodă de plată</MudText>
+                <MudText Typo="Typo.body2">@NumeMetodaPlata(_cheltuiala.MetodaPlata)</MudText>
+            </MudStack>
+
+            <MudDivider Class="my-3" />
+            <MudText Typo="Typo.subtitle2" Class="mb-1">Atașamente</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                Niciun fișier atașat încă — modulul de documente vine într-un pas separat.
+            </MudText>
+
+            @if (!string.IsNullOrWhiteSpace(_cheltuiala.Observatii))
+            {
+                <MudDivider Class="my-3" />
+                <MudText Typo="Typo.subtitle2" Class="mb-1">Observații</MudText>
+                <MudText Typo="Typo.body2">@_cheltuiala.Observatii</MudText>
+            }
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Editeaza">Editează</MudButton>
+        <MudTooltip Text="În curând">
+            <MudButton Disabled="true">Împarte pe proiecte</MudButton>
+        </MudTooltip>
+        <MudTooltip Text="În curând">
+            <MudButton Color="Color.Error" Disabled="true">Anulează</MudButton>
+        </MudTooltip>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Inchide">Închide</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid CheltuialaId { get; set; }
+    [Parameter] public string? ProiectNume { get; set; }
+    [Parameter] public string? ProiectCod { get; set; }
+
+    private CheltuialaDto? _cheltuiala;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _cheltuiala = await CheltuialaService.ObtineCheltuialaDupaIdAsync(CheltuialaId);
+    }
+
+    private string CategorieCuSubcategorie =>
+        string.IsNullOrWhiteSpace(_cheltuiala?.Subcategorie)
+            ? NumeCategorie(_cheltuiala!.Categorie)
+            : $"{NumeCategorie(_cheltuiala.Categorie)} > {_cheltuiala.Subcategorie}";
+
+    private void Inchide() => MudDialog.Close(DialogResult.Ok(true));
+    private void Editeaza() => MudDialog.Close(DialogResult.Ok("editeaza"));
+
+    private static string FormateazaLei(decimal valoare) => $"{valoare:N2} lei";
+
+    private static string NumeCategorie(CategorieCheltuiala categorie) => categorie switch
+    {
+        CategorieCheltuiala.Materiale => "Materiale",
+        CategorieCheltuiala.Servicii => "Servicii",
+        CategorieCheltuiala.AlteCheltuieli => "Alte cheltuieli",
+        _ => categorie.ToString()
+    };
+
+    private static Color CuloareCategorie(CategorieCheltuiala categorie) => categorie switch
+    {
+        CategorieCheltuiala.Materiale => Color.Info,
+        CategorieCheltuiala.Servicii => Color.Secondary,
+        CategorieCheltuiala.AlteCheltuieli => Color.Warning,
+        _ => Color.Default
+    };
+
+    private static string IconaCategorie(CategorieCheltuiala categorie) => categorie switch
+    {
+        CategorieCheltuiala.Materiale => Icons.Material.Outlined.Inventory2,
+        CategorieCheltuiala.Servicii => Icons.Material.Outlined.Handyman,
+        CategorieCheltuiala.AlteCheltuieli => Icons.Material.Outlined.Category,
+        _ => Icons.Material.Outlined.Receipt
+    };
+
+    private static string NumeMetodaPlata(MetodaPlata? metoda) => metoda switch
+    {
+        MetodaPlata.Numerar => "Numerar",
+        MetodaPlata.Card => "Card",
+        MetodaPlata.TransferBancar => "Transfer bancar",
+        MetodaPlata.Altul => "Altul",
+        null => "-",
+        _ => metoda.ToString() ?? "-"
+    };
+}

@@ -1,0 +1,507 @@
+@using EvaWoods.Application.Piese
+@using EvaWoods.Application.Produse
+@using EvaWoods.Domain.Piese
+@using EvaWoods.Domain.Produse
+@using System.Text.RegularExpressions
+@inject IPiesaService PiesaService
+@inject IProdusService ProdusService
+@inject IDialogService DialogService
+
+<MudDialog Class="piese-dialog-lat">
+    <DialogContent>
+        <MudExpansionPanels Elevation="0" Class="mb-3">
+            <MudExpansionPanel Text="Adăugare rapidă (500x300=2, câte una pe linie)">
+                <MudTextField T="string" @bind-Value="_textRapid" Lines="5" Immediate="true"
+                              Placeholder="500x300=2&#10;720x560=2&#10;800x560=1" />
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mt-2">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        Format: lungime x lățime = cantitate. Rândurile generate se completează apoi cu material, corp și cant mai jos.
+                    </MudText>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" OnClick="GenereazaDinTextRapid">
+                        Generează rânduri
+                    </MudButton>
+                </MudStack>
+                @if (_eroareTextRapid is not null)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">@_eroareTextRapid</MudAlert>
+                }
+            </MudExpansionPanel>
+
+            <MudExpansionPanel Text="Acțiuni în masă (aplică pe rândurile selectate sau pe toate)">
+                <MudGrid>
+                    <MudItem xs="6" sm="3">
+                        <MudSelect T="Guid?" @bind-Value="_masaCorpId" Label="Corp" Clearable="true" Margin="Margin.Dense">
+                            @foreach (var corp in _corpuri)
+                            {
+                                <MudSelectItem T="Guid?" Value="corp.Id">@corp.Nume</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="6" sm="3">
+                        <MudSelect T="Guid?" @bind-Value="_masaMaterialId" Label="Material" Clearable="true" Margin="Margin.Dense">
+                            @foreach (var material in _materiale)
+                            {
+                                <MudSelectItem T="Guid?" Value="material.Id">@material.Nume</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="6" sm="2">
+                        <MudNumericField T="decimal?" @bind-Value="_masaGrosime" Label="Grosime (mm)" Min="0m" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="6" sm="2">
+                        <MudSelect T="int?" @bind-Value="_masaCantLungi" Label="Cant lungi" Clearable="true" Margin="Margin.Dense">
+                            <MudSelectItem T="int?" Value="0">0</MudSelectItem>
+                            <MudSelectItem T="int?" Value="1">1</MudSelectItem>
+                            <MudSelectItem T="int?" Value="2">2</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="6" sm="2">
+                        <MudSelect T="int?" @bind-Value="_masaCantScurte" Label="Cant scurte" Clearable="true" Margin="Margin.Dense">
+                            <MudSelectItem T="int?" Value="0">0</MudSelectItem>
+                            <MudSelectItem T="int?" Value="1">1</MudSelectItem>
+                            <MudSelectItem T="int?" Value="2">2</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="6" sm="3">
+                        <MudSelect T="Guid?" @bind-Value="_masaMaterialCantId" Label="Material cant" Clearable="true" Margin="Margin.Dense">
+                            @foreach (var cant in _materialeCant)
+                            {
+                                <MudSelectItem T="Guid?" Value="cant.Id">@cant.Nume</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="6" sm="3">
+                        <MudSelect T="DirectieFibra?" @bind-Value="_masaFibra" Label="Direcție fibră" Clearable="true" Margin="Margin.Dense">
+                            <MudSelectItem T="DirectieFibra?" Value="DirectieFibra.Fara">Fără</MudSelectItem>
+                            <MudSelectItem T="DirectieFibra?" Value="DirectieFibra.Verticala">Verticală</MudSelectItem>
+                            <MudSelectItem T="DirectieFibra?" Value="DirectieFibra.Orizontala">Orizontală</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="6" sm="2">
+                        <MudSelect T="bool?" @bind-Value="_masaRotire" Label="Rotire" Clearable="true" Margin="Margin.Dense">
+                            <MudSelectItem T="bool?" Value="true">Da</MudSelectItem>
+                            <MudSelectItem T="bool?" Value="false">Nu</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="4" Class="d-flex align-center">
+                        <MudStack Row="true" Spacing="2">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" OnClick="AplicaSelectiei"
+                                       Disabled="@(!_randuri.Any(r => r.Selectat))">
+                                Aplică selecției (@_randuri.Count(r => r.Selectat))
+                            </MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="AplicaTuturor">
+                                Aplică tuturor rândurilor
+                            </MudButton>
+                        </MudStack>
+                    </MudItem>
+                </MudGrid>
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-1">
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                Un rând nou apare automat când completezi dimensiunile pe ultimul rând.
+            </MudText>
+            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="DeschideDialogCorpNou">
+                + Corp nou
+            </MudButton>
+        </MudStack>
+
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; min-width: 1200px;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--mud-palette-lines-default);">
+                        <th style="width: 36px;">
+                            <MudCheckBox T="bool" Value="@_toateSelectate" ValueChanged="ComutaSelectareToate" Dense="true" />
+                        </th>
+                        <th style="min-width: 110px; text-align: left;"><MudText Typo="Typo.caption">Denumire</MudText></th>
+                        <th style="min-width: 85px; text-align: left;"><MudText Typo="Typo.caption">Lungime</MudText></th>
+                        <th style="min-width: 85px; text-align: left;"><MudText Typo="Typo.caption">Lățime</MudText></th>
+                        <th style="min-width: 70px; text-align: left;"><MudText Typo="Typo.caption">Buc</MudText></th>
+                        <th style="min-width: 130px; text-align: left;"><MudText Typo="Typo.caption">Corp</MudText></th>
+                        <th style="min-width: 150px; text-align: left;"><MudText Typo="Typo.caption">Material</MudText></th>
+                        <th style="min-width: 80px; text-align: left;"><MudText Typo="Typo.caption">Grosime</MudText></th>
+                        <th style="min-width: 150px; text-align: left;"><MudText Typo="Typo.caption">Cant</MudText></th>
+                        <th style="min-width: 130px; text-align: left;"><MudText Typo="Typo.caption">Material cant</MudText></th>
+                        <th style="min-width: 110px; text-align: left;"><MudText Typo="Typo.caption">Fibră</MudText></th>
+                        <th style="min-width: 55px; text-align: left;"><MudText Typo="Typo.caption">Rotire</MudText></th>
+                        <th style="min-width: 75px; text-align: right;"><MudText Typo="Typo.caption">Total cant</MudText></th>
+                        <th style="width: 80px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var rand in _randuri)
+                    {
+                        <tr style="border-bottom: 1px solid var(--mud-palette-lines-default);">
+                            <td><MudCheckBox T="bool" @bind-Value="rand.Selectat" Dense="true" /></td>
+                            <td><MudTextField T="string" @bind-Value="rand.Nume" Margin="Margin.Dense" Placeholder="opțional" /></td>
+                            <td>
+                                <MudNumericField T="decimal?" @bind-Value="rand.Lungime" Margin="Margin.Dense" Min="0m" HideSpinButtons="true"
+                                                  @bind-Value:after="VerificaRandNou" />
+                            </td>
+                            <td>
+                                <MudNumericField T="decimal?" @bind-Value="rand.Latime" Margin="Margin.Dense" Min="0m" HideSpinButtons="true"
+                                                  @bind-Value:after="VerificaRandNou" />
+                            </td>
+                            <td>
+                                <MudNumericField T="int?" @bind-Value="rand.Cantitate" Margin="Margin.Dense" Min="1" HideSpinButtons="true" />
+                            </td>
+                            <td>
+                                <MudSelect T="Guid?" @bind-Value="rand.CorpId" Margin="Margin.Dense" Clearable="true">
+                                    @foreach (var corp in _corpuri)
+                                    {
+                                        <MudSelectItem T="Guid?" Value="corp.Id">@corp.Nume</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </td>
+                            <td>
+                                <MudSelect T="Guid?" Value="rand.MaterialId" ValueChanged="@(id => MaterialSchimbat(rand, id))" Margin="Margin.Dense" Clearable="true">
+                                    @foreach (var material in _materiale)
+                                    {
+                                        <MudSelectItem T="Guid?" Value="material.Id">@material.Nume</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </td>
+                            <td>
+                                <MudNumericField T="decimal?" @bind-Value="rand.Grosime" Margin="Margin.Dense" Min="0m" HideSpinButtons="true" />
+                            </td>
+                            <td>
+                                @if (EstePatrata(rand))
+                                {
+                                    <MudSelect T="int" @bind-Value="rand.TotalCantPatrat" Margin="Margin.Dense" Label="Total (0-4)">
+                                        <MudSelectItem T="int" Value="0">0</MudSelectItem>
+                                        <MudSelectItem T="int" Value="1">1</MudSelectItem>
+                                        <MudSelectItem T="int" Value="2">2</MudSelectItem>
+                                        <MudSelectItem T="int" Value="3">3</MudSelectItem>
+                                        <MudSelectItem T="int" Value="4">4</MudSelectItem>
+                                    </MudSelect>
+                                }
+                                else
+                                {
+                                    <MudStack Row="true" Spacing="1">
+                                        <MudSelect T="int" @bind-Value="rand.CantLungi" Margin="Margin.Dense" Label="L" Style="min-width: 60px;">
+                                            <MudSelectItem T="int" Value="0">0</MudSelectItem>
+                                            <MudSelectItem T="int" Value="1">1</MudSelectItem>
+                                            <MudSelectItem T="int" Value="2">2</MudSelectItem>
+                                        </MudSelect>
+                                        <MudSelect T="int" @bind-Value="rand.CantScurte" Margin="Margin.Dense" Label="S" Style="min-width: 60px;">
+                                            <MudSelectItem T="int" Value="0">0</MudSelectItem>
+                                            <MudSelectItem T="int" Value="1">1</MudSelectItem>
+                                            <MudSelectItem T="int" Value="2">2</MudSelectItem>
+                                        </MudSelect>
+                                    </MudStack>
+                                }
+                            </td>
+                            <td>
+                                <MudSelect T="Guid?" @bind-Value="rand.MaterialCantId" Margin="Margin.Dense" Clearable="true">
+                                    @foreach (var cant in _materialeCant)
+                                    {
+                                        <MudSelectItem T="Guid?" Value="cant.Id">@cant.Nume</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </td>
+                            <td>
+                                <MudSelect T="DirectieFibra" @bind-Value="rand.Fibra" Margin="Margin.Dense">
+                                    <MudSelectItem T="DirectieFibra" Value="DirectieFibra.Fara">Fără</MudSelectItem>
+                                    <MudSelectItem T="DirectieFibra" Value="DirectieFibra.Verticala">Verticală</MudSelectItem>
+                                    <MudSelectItem T="DirectieFibra" Value="DirectieFibra.Orizontala">Orizontală</MudSelectItem>
+                                </MudSelect>
+                            </td>
+                            <td><MudCheckBox T="bool" @bind-Value="rand.Rotire" Dense="true" /></td>
+                            <td style="text-align: right;">
+                                <MudText Typo="Typo.caption">@TotalCantRand(rand)</MudText>
+                            </td>
+                            <td>
+                                <MudStack Row="true" Spacing="0">
+                                    <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" OnClick="@(() => DuplicaRand(rand))" />
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" OnClick="@(() => StergeRand(rand))" />
+                                </MudStack>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (_eroareSalvare is not null)
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2">@_eroareSalvare</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Anuleaza">Anulează</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SalveazaToate" Disabled="_seSalveaza">
+            Salvează toate (@_randuri.Count(RandValid) piese)
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid ProiectId { get; set; }
+
+    private readonly List<RandPiesa> _randuri = new() { new RandPiesa() };
+    private List<CorpProiectDto> _corpuri = new();
+    private List<ProdusDto> _materiale = new();
+    private List<ProdusDto> _materialeCant = new();
+
+    private string _textRapid = string.Empty;
+    private string? _eroareTextRapid;
+    private string? _eroareSalvare;
+    private bool _seSalveaza;
+    private bool _toateSelectate;
+
+    private Guid? _masaCorpId;
+    private Guid? _masaMaterialId;
+    private decimal? _masaGrosime;
+    private int? _masaCantLungi;
+    private int? _masaCantScurte;
+    private Guid? _masaMaterialCantId;
+    private DirectieFibra? _masaFibra;
+    private bool? _masaRotire;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _corpuri = (await PiesaService.ObtineCorpuriDupaProiectAsync(ProiectId)).ToList();
+
+        var produse = await ProdusService.ObtineToateProduseleAsync();
+        _materiale = produse.Where(p => p.EsteActiv && p.Categorie == CategorieProdus.Materiale).ToList();
+        _materialeCant = produse.Where(p => p.EsteActiv && p.Categorie == CategorieProdus.Consumabile).ToList();
+    }
+
+    private static bool EstePatrata(RandPiesa rand) =>
+        rand.Lungime is > 0 && rand.Latime is > 0 && rand.Lungime == rand.Latime;
+
+    private static bool RandGol(RandPiesa rand) =>
+        rand.Lungime is null && rand.Latime is null && string.IsNullOrWhiteSpace(rand.Nume);
+
+    private static bool RandValid(RandPiesa rand) =>
+        rand.Lungime is > 0 && rand.Latime is > 0 && rand.Cantitate is >= 1;
+
+    private void VerificaRandNou()
+    {
+        var ultimul = _randuri.LastOrDefault();
+        if (ultimul is not null && ultimul.Lungime is > 0 && ultimul.Latime is > 0)
+        {
+            _randuri.Add(new RandPiesa());
+        }
+    }
+
+    private void MaterialSchimbat(RandPiesa rand, Guid? materialId)
+    {
+        rand.MaterialId = materialId;
+
+        if (materialId.HasValue && rand.Grosime is null)
+        {
+            var material = _materiale.FirstOrDefault(m => m.Id == materialId.Value);
+            if (material?.GrosimeMm is not null)
+            {
+                rand.Grosime = material.GrosimeMm;
+            }
+        }
+    }
+
+    private void GenereazaDinTextRapid()
+    {
+        _eroareTextRapid = null;
+        var linii = _textRapid.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var regex = new Regex(@"^(\d+(?:[.,]\d+)?)\s*[xX*]\s*(\d+(?:[.,]\d+)?)\s*=\s*(\d+)$");
+        var liniiInvalide = new List<string>();
+
+        foreach (var linie in linii)
+        {
+            var potrivire = regex.Match(linie);
+            if (!potrivire.Success)
+            {
+                liniiInvalide.Add(linie);
+                continue;
+            }
+
+            var lungime = decimal.Parse(potrivire.Groups[1].Value.Replace(',', '.'), System.Globalization.CultureInfo.InvariantCulture);
+            var latime = decimal.Parse(potrivire.Groups[2].Value.Replace(',', '.'), System.Globalization.CultureInfo.InvariantCulture);
+            var cantitate = int.Parse(potrivire.Groups[3].Value);
+
+            var randGol = _randuri.FirstOrDefault(RandGol);
+            var rand = randGol ?? new RandPiesa();
+            rand.Lungime = lungime;
+            rand.Latime = latime;
+            rand.Cantitate = cantitate;
+
+            if (randGol is null)
+            {
+                _randuri.Add(rand);
+            }
+        }
+
+        if (liniiInvalide.Count > 0)
+        {
+            _eroareTextRapid = $"Linii ignorate (format invalid): {string.Join("; ", liniiInvalide)}";
+        }
+        else
+        {
+            _textRapid = string.Empty;
+        }
+
+        VerificaRandNou();
+    }
+
+    private void ComutaSelectareToate(bool valoare)
+    {
+        _toateSelectate = valoare;
+        foreach (var rand in _randuri.Where(r => !RandGol(r)))
+        {
+            rand.Selectat = valoare;
+        }
+    }
+
+    private void AplicaSelectiei() => AplicaPe(_randuri.Where(r => r.Selectat));
+
+    private void AplicaTuturor() => AplicaPe(_randuri.Where(r => !RandGol(r)));
+
+    private void AplicaPe(IEnumerable<RandPiesa> randuri)
+    {
+        foreach (var rand in randuri)
+        {
+            if (_masaCorpId.HasValue) rand.CorpId = _masaCorpId;
+            if (_masaMaterialId.HasValue) MaterialSchimbat(rand, _masaMaterialId);
+            if (_masaGrosime.HasValue) rand.Grosime = _masaGrosime;
+            if (_masaCantLungi.HasValue) rand.CantLungi = _masaCantLungi.Value;
+            if (_masaCantScurte.HasValue) rand.CantScurte = _masaCantScurte.Value;
+            if (_masaMaterialCantId.HasValue) rand.MaterialCantId = _masaMaterialCantId;
+            if (_masaFibra.HasValue) rand.Fibra = _masaFibra.Value;
+            if (_masaRotire.HasValue) rand.Rotire = _masaRotire.Value;
+        }
+    }
+
+    private void DuplicaRand(RandPiesa rand)
+    {
+        var index = _randuri.IndexOf(rand);
+        _randuri.Insert(index + 1, new RandPiesa
+        {
+            Nume = rand.Nume,
+            Lungime = rand.Lungime,
+            Latime = rand.Latime,
+            Cantitate = rand.Cantitate,
+            CorpId = rand.CorpId,
+            MaterialId = rand.MaterialId,
+            Grosime = rand.Grosime,
+            CantLungi = rand.CantLungi,
+            CantScurte = rand.CantScurte,
+            TotalCantPatrat = rand.TotalCantPatrat,
+            MaterialCantId = rand.MaterialCantId,
+            Fibra = rand.Fibra,
+            Rotire = rand.Rotire
+        });
+    }
+
+    private void StergeRand(RandPiesa rand)
+    {
+        _randuri.Remove(rand);
+        if (_randuri.Count == 0)
+        {
+            _randuri.Add(new RandPiesa());
+        }
+    }
+
+    private async Task DeschideDialogCorpNou()
+    {
+        var parametri = new DialogParameters { ["ProiectId"] = ProiectId };
+        var dialog = await DialogService.ShowAsync<AdaugaCorpDialog>("Corp nou", parametri);
+        var rezultat = await dialog.Result;
+
+        if (rezultat is { Canceled: false, Data: CorpProiectDto corpNou })
+        {
+            _corpuri = (await PiesaService.ObtineCorpuriDupaProiectAsync(ProiectId)).ToList();
+            _masaCorpId = corpNou.Id;
+        }
+    }
+
+    private string TotalCantRand(RandPiesa rand)
+    {
+        if (!RandValid(rand)) return "-";
+
+        var (lungi, scurte) = CantEfectiv(rand);
+        if (lungi == 0 && scurte == 0) return "-";
+
+        var total = (lungi * (rand.Lungime!.Value + 40m) + scurte * (rand.Latime!.Value + 40m)) * rand.Cantitate!.Value / 1000m;
+        return $"{total:0.##} ml";
+    }
+
+    private static (int Lungi, int Scurte) CantEfectiv(RandPiesa rand)
+    {
+        if (EstePatrata(rand))
+        {
+            var lungi = Math.Min(2, rand.TotalCantPatrat);
+            return (lungi, rand.TotalCantPatrat - lungi);
+        }
+
+        return (rand.CantLungi, rand.CantScurte);
+    }
+
+    private async Task SalveazaToate()
+    {
+        _eroareSalvare = null;
+        var valide = _randuri.Where(RandValid).ToList();
+
+        if (valide.Count == 0)
+        {
+            _eroareSalvare = "Niciun rând valid de salvat. Completează cel puțin lungimea, lățimea și cantitatea.";
+            return;
+        }
+
+        var incomplete = _randuri.Where(r => !RandGol(r) && !RandValid(r)).ToList();
+        if (incomplete.Count > 0)
+        {
+            _eroareSalvare = $"{incomplete.Count} rânduri au date incomplete (dimensiuni > 0 și cantitate ≥ 1 obligatorii). Completează-le sau șterge-le.";
+            return;
+        }
+
+        _seSalveaza = true;
+
+        var requests = valide.Select(rand =>
+        {
+            var (lungi, scurte) = CantEfectiv(rand);
+            return new CreeazaPiesaRequest(
+                ProiectId: ProiectId,
+                LungimeMm: rand.Lungime!.Value,
+                LatimeMm: rand.Latime!.Value,
+                Cantitate: rand.Cantitate!.Value,
+                Nume: rand.Nume,
+                CorpId: rand.CorpId,
+                MaterialProdusId: rand.MaterialId,
+                GrosimeMm: rand.Grosime,
+                CantLaturiLungi: lungi,
+                CantLaturiScurte: scurte,
+                MaterialCantProdusId: rand.MaterialCantId,
+                DirectieFibra: rand.Fibra,
+                PermiteRotire: rand.Rotire,
+                Observatii: rand.Observatii);
+        }).ToList();
+
+        await PiesaService.AdaugaPieseAsync(requests);
+
+        _seSalveaza = false;
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Anuleaza() => MudDialog.Cancel();
+
+    private class RandPiesa
+    {
+        public bool Selectat { get; set; }
+        public string? Nume { get; set; }
+        public decimal? Lungime { get; set; }
+        public decimal? Latime { get; set; }
+        public int? Cantitate { get; set; } = 1;
+        public Guid? CorpId { get; set; }
+        public Guid? MaterialId { get; set; }
+        public decimal? Grosime { get; set; }
+        public int CantLungi { get; set; }
+        public int CantScurte { get; set; }
+        public int TotalCantPatrat { get; set; }
+        public Guid? MaterialCantId { get; set; }
+        public DirectieFibra Fibra { get; set; } = DirectieFibra.Fara;
+        public bool Rotire { get; set; }
+        public string? Observatii { get; set; }
+    }
+}

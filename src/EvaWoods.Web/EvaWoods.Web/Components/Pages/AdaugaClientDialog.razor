@@ -1,0 +1,93 @@
+@using EvaWoods.Application.Clienti
+@using EvaWoods.Domain.Clienti
+@inject IClientService ClientService
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model">
+            <MudTextField @bind-Value="_model.Nume" Label="Nume" Required="true" RequiredError="Numele este obligatoriu." />
+            <MudTextField @bind-Value="_model.Telefon" Label="Telefon" Required="true" RequiredError="Telefonul este obligatoriu." Class="mt-3" />
+            <MudTextField @bind-Value="_model.Email" Label="Email" Class="mt-3" />
+            <MudTextField @bind-Value="_model.Localitate" Label="Localitate" Required="true" RequiredError="Localitatea este obligatorie." Class="mt-3" />
+            <MudTextField @bind-Value="_model.Judet" Label="Județ" Class="mt-3" />
+            <MudSelect T="StatusClient" @bind-Value="_model.Status" Label="Status" Class="mt-3">
+                <MudSelectItem T="StatusClient" Value="StatusClient.Prospect">Prospect</MudSelectItem>
+                <MudSelectItem T="StatusClient" Value="StatusClient.Activ">Activ</MudSelectItem>
+                <MudSelectItem T="StatusClient" Value="StatusClient.Inactiv">Inactiv</MudSelectItem>
+            </MudSelect>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Anuleaza">Anulează</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Salveaza" Disabled="_seSalveaza">
+            Salvează
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public ClientDto? ClientDeEditat { get; set; }
+
+    private MudForm _form = default!;
+    private bool _seSalveaza;
+    private readonly ModelClient _model = new();
+
+    protected override void OnInitialized()
+    {
+        if (ClientDeEditat is not null)
+        {
+            _model.Nume = ClientDeEditat.Nume;
+            _model.Telefon = ClientDeEditat.Telefon;
+            _model.Email = ClientDeEditat.Email;
+            _model.Localitate = ClientDeEditat.Localitate;
+            _model.Judet = ClientDeEditat.Judet;
+            _model.Status = ClientDeEditat.Status;
+        }
+    }
+
+    private async Task Salveaza()
+    {
+        await _form.Validate();
+        if (!_form.IsValid) return;
+
+        _seSalveaza = true;
+
+        if (ClientDeEditat is not null)
+        {
+            await ClientService.ActualizeazaClientAsync(new ActualizeazaClientRequest(
+                Id: ClientDeEditat.Id,
+                Nume: _model.Nume,
+                Telefon: _model.Telefon,
+                Localitate: _model.Localitate,
+                Email: _model.Email,
+                Judet: _model.Judet,
+                Status: _model.Status));
+        }
+        else
+        {
+            await ClientService.CreeazaClientAsync(new CreeazaClientRequest(
+                Nume: _model.Nume,
+                Telefon: _model.Telefon,
+                Localitate: _model.Localitate,
+                Email: _model.Email,
+                Judet: _model.Judet,
+                Status: _model.Status));
+        }
+
+        _seSalveaza = false;
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Anuleaza() => MudDialog.Cancel();
+
+    private class ModelClient
+    {
+        public string Nume { get; set; } = string.Empty;
+        public string Telefon { get; set; } = string.Empty;
+        public string? Email { get; set; }
+        public string Localitate { get; set; } = string.Empty;
+        public string? Judet { get; set; }
+        public StatusClient Status { get; set; } = StatusClient.Prospect;
+    }
+}

@@ -1,0 +1,286 @@
+@using EvaWoods.Application.Oferte
+@using EvaWoods.Application.Produse
+@using EvaWoods.Domain.Produse
+@inject IOfertaService OfertaService
+@inject IProdusService ProdusService
+
+<MudDialog Class="adauga-linie-oferta-dialog-lat">
+    <DialogContent>
+        <MudForm @ref="_form" Model="_model">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="TipRand" @bind-Value="_model.Tip" Label="Tip rând" Required="true" Variant="Variant.Outlined">
+                        <MudSelectItem T="TipRand" Value="TipRand.DinCatalog">Produs din catalog</MudSelectItem>
+                        <MudSelectItem T="TipRand" Value="TipRand.Personalizat">Rând personalizat</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    @if (_model.Tip == TipRand.DinCatalog)
+                    {
+                        <MudSelect T="Guid?" Value="_model.ProdusId" ValueChanged="ProdusSchimbat" Label="Produs / Serviciu" Required="true"
+                                   RequiredError="Alege un produs din catalog." Variant="Variant.Outlined">
+                            @foreach (var produs in _produse)
+                            {
+                                <MudSelectItem T="Guid?" Value="produs.Id">@produs.Nume</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+                    else
+                    {
+                        <MudTextField @bind-Value="_model.Descriere" Label="Descriere" Required="true" RequiredError="Descrierea este obligatorie."
+                                      Variant="Variant.Outlined" />
+                    }
+                </MudItem>
+            </MudGrid>
+
+            <MudGrid Class="mt-1">
+                <MudItem xs="12" sm="4">
+                    <MudNumericField @bind-Value="_model.Cantitate" Label="Cantitate ofertată" Min="0.01m" Required="true" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    @if (_model.Tip == TipRand.DinCatalog)
+                    {
+                        <MudTextField T="string" Value="@(_produsSelectat is not null ? NumeUM(_produsSelectat.UM) : "-")" Label="Unitate de măsură"
+                                      ReadOnly="true" Variant="Variant.Outlined" />
+                    }
+                    else
+                    {
+                        <MudSelect T="UnitateMasura" @bind-Value="_model.UM" Label="Unitate de măsură" Required="true" Variant="Variant.Outlined">
+                            <MudSelectItem T="UnitateMasura" Value="UnitateMasura.Bucata">Bucată</MudSelectItem>
+                            <MudSelectItem T="UnitateMasura" Value="UnitateMasura.Set">Set</MudSelectItem>
+                            <MudSelectItem T="UnitateMasura" Value="UnitateMasura.Foaie">Foaie</MudSelectItem>
+                            <MudSelectItem T="UnitateMasura" Value="UnitateMasura.MetruLiniar">Metru liniar</MudSelectItem>
+                            <MudSelectItem T="UnitateMasura" Value="UnitateMasura.MetruPatrat">Metru pătrat</MudSelectItem>
+                            <MudSelectItem T="UnitateMasura" Value="UnitateMasura.Kilogram">Kilogram</MudSelectItem>
+                            <MudSelectItem T="UnitateMasura" Value="UnitateMasura.Litru">Litru</MudSelectItem>
+                            <MudSelectItem T="UnitateMasura" Value="UnitateMasura.Ora">Oră</MudSelectItem>
+                            <MudSelectItem T="UnitateMasura" Value="UnitateMasura.Zi">Zi</MudSelectItem>
+                            <MudSelectItem T="UnitateMasura" Value="UnitateMasura.Lucrare">Lucrare</MudSelectItem>
+                            <MudSelectItem T="UnitateMasura" Value="UnitateMasura.Transport">Transport</MudSelectItem>
+                            <MudSelectItem T="UnitateMasura" Value="UnitateMasura.Procent">Procent</MudSelectItem>
+                        </MudSelect>
+                    }
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    @if (_model.Tip == TipRand.DinCatalog)
+                    {
+                        <MudTextField T="string" Value="@(_produsSelectat is not null ? NumeCategorie(_produsSelectat.Categorie) : "-")" Label="Categorie"
+                                      ReadOnly="true" Variant="Variant.Outlined" />
+                    }
+                    else
+                    {
+                        <MudSelect T="CategorieProdus" @bind-Value="_model.Categorie" Label="Categorie" Required="true" Variant="Variant.Outlined">
+                            <MudSelectItem T="CategorieProdus" Value="CategorieProdus.Materiale">Materiale</MudSelectItem>
+                            <MudSelectItem T="CategorieProdus" Value="CategorieProdus.Consumabile">Consumabile</MudSelectItem>
+                            <MudSelectItem T="CategorieProdus" Value="CategorieProdus.Feronerie">Feronerie</MudSelectItem>
+                            <MudSelectItem T="CategorieProdus" Value="CategorieProdus.Servicii">Servicii</MudSelectItem>
+                        </MudSelect>
+                    }
+                </MudItem>
+            </MudGrid>
+
+            <MudGrid Class="mt-1">
+                <MudItem xs="12" sm="4">
+                    @if (_model.Tip == TipRand.DinCatalog)
+                    {
+                        <MudTextField T="string" Value="@(_produsSelectat is not null ? $"{_produsSelectat.PretAchizitie:N2} lei" : "-")" Label="Preț cost"
+                                      ReadOnly="true" Variant="Variant.Outlined" />
+                    }
+                    else
+                    {
+                        <MudNumericField @bind-Value="_model.PretCost" Label="Preț cost (lei)" Min="0m" Required="true" Variant="Variant.Outlined" />
+                    }
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    @if (_model.Tip == TipRand.DinCatalog)
+                    {
+                        <MudTextField T="string" Value="@(_produsSelectat is not null ? $"{PretVanzareSelectat:N2} lei" : "-")" Label="Preț vânzare"
+                                      ReadOnly="true" Variant="Variant.Outlined" />
+                    }
+                    else
+                    {
+                        <MudNumericField @bind-Value="_model.PretVanzare" Label="Preț vânzare (lei)" Min="0m" Required="true" Variant="Variant.Outlined" />
+                    }
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField @bind-Value="_model.ProcentTva" Label="TVA %" Min="0m" Variant="Variant.Outlined" />
+                </MudItem>
+            </MudGrid>
+
+            <MudPaper Class="pa-3 mt-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                <MudGrid>
+                    <MudItem xs="4">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Total cost</MudText>
+                        <MudText Typo="Typo.body1">@($"{TotalCost:N2} lei")</MudText>
+                    </MudItem>
+                    <MudItem xs="4">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Total vânzare</MudText>
+                        <MudText Typo="Typo.body1" Color="Color.Success">@($"{TotalVanzare:N2} lei")</MudText>
+                    </MudItem>
+                    <MudItem xs="4">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Total vânzare (cu TVA)</MudText>
+                        <MudText Typo="Typo.body1">@($"{TotalVanzareCuTva:N2} lei")</MudText>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+
+            <MudGrid Class="mt-1">
+                <MudItem xs="12" sm="6" Class="d-flex align-center">
+                    <MudSwitch T="bool" @bind-Value="_model.VizibilClient" Label="Vizibil pentru client" Color="Color.Success" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_model.Nota" Label="Etichetă / Notă (opțional)" Placeholder="Ex: pentru insulă, etaj 2..."
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrWhiteSpace(_mesajSucces))
+            {
+                <MudAlert Severity="Severity.Success" Dense="true" Class="mt-3">@_mesajSucces</MudAlert>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudCheckBox T="bool" @bind-Value="_adaugaAltRand" Label="Adaugă alt rând după salvare" Class="mr-auto" />
+        <MudButton OnClick="Anuleaza">Anulează</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Salveaza" Disabled="_seSalveaza">Salvează rând</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid ProiectId { get; set; }
+
+    private enum TipRand { DinCatalog, Personalizat }
+
+    private MudForm _form = default!;
+    private bool _seSalveaza;
+    private bool _adaugaAltRand;
+    private string? _mesajSucces;
+    private List<ProdusDto> _produse = new();
+    private ProdusDto? _produsSelectat;
+    private readonly ModelLinie _model = new();
+
+    private decimal PretVanzareSelectat => _produsSelectat?.PretCalcul ?? _produsSelectat?.PretAchizitie ?? 0;
+
+    private decimal PretCostEfectiv => _model.Tip == TipRand.DinCatalog
+        ? (_produsSelectat?.PretAchizitie ?? 0)
+        : _model.PretCost;
+
+    private decimal PretVanzareEfectiv => _model.Tip == TipRand.DinCatalog
+        ? PretVanzareSelectat
+        : _model.PretVanzare;
+
+    private decimal TotalCost => _model.Cantitate * PretCostEfectiv;
+    private decimal TotalVanzare => _model.Cantitate * PretVanzareEfectiv;
+    private decimal TotalVanzareCuTva => TotalVanzare * (1 + _model.ProcentTva / 100m);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _produse = (await ProdusService.ObtineToateProduseleAsync())
+            .Where(p => p.EsteActiv)
+            .OrderBy(p => p.Nume)
+            .ToList();
+    }
+
+    private void ProdusSchimbat(Guid? produsId)
+    {
+        _model.ProdusId = produsId;
+        _produsSelectat = _produse.FirstOrDefault(p => p.Id == produsId);
+        _mesajSucces = null;
+    }
+
+    private async Task Salveaza()
+    {
+        await _form.Validate();
+        if (!_form.IsValid) return;
+
+        if (_model.Tip == TipRand.DinCatalog && (_model.ProdusId is null || _produsSelectat is null)) return;
+        if (_model.Cantitate <= 0) return;
+
+        _seSalveaza = true;
+
+        var descriere = _model.Tip == TipRand.DinCatalog ? _produsSelectat!.Nume : _model.Descriere;
+        var categorie = _model.Tip == TipRand.DinCatalog ? _produsSelectat!.Categorie : _model.Categorie;
+        var um = _model.Tip == TipRand.DinCatalog ? _produsSelectat!.UM : _model.UM;
+
+        await OfertaService.AdaugaLinieAsync(new AdaugaLinieOfertaRequest(
+            ProiectId: ProiectId,
+            ProdusId: _model.Tip == TipRand.DinCatalog ? _model.ProdusId : null,
+            Descriere: descriere,
+            Categorie: categorie,
+            UM: um,
+            CantitateOfertata: _model.Cantitate,
+            PretCost: PretCostEfectiv,
+            PretVanzare: PretVanzareEfectiv,
+            ProcentTva: _model.ProcentTva,
+            VizibilClient: _model.VizibilClient,
+            Nota: _model.Nota));
+
+        _seSalveaza = false;
+
+        if (_adaugaAltRand)
+        {
+            _mesajSucces = "Rând adăugat. Poți continua cu următorul.";
+            ResetareFormular();
+        }
+        else
+        {
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+    }
+
+    private void ResetareFormular()
+    {
+        _model.ProdusId = null;
+        _model.Descriere = string.Empty;
+        _model.Cantitate = 1;
+        _model.PretCost = 0;
+        _model.PretVanzare = 0;
+        _model.Nota = null;
+        _produsSelectat = null;
+    }
+
+    private void Anuleaza() => MudDialog.Cancel();
+
+    private static string NumeUM(UnitateMasura um) => um switch
+    {
+        UnitateMasura.Bucata => "buc",
+        UnitateMasura.Set => "set",
+        UnitateMasura.Foaie => "foaie",
+        UnitateMasura.MetruLiniar => "ml",
+        UnitateMasura.MetruPatrat => "m²",
+        UnitateMasura.Kilogram => "kg",
+        UnitateMasura.Litru => "l",
+        UnitateMasura.Ora => "oră",
+        UnitateMasura.Zi => "zi",
+        UnitateMasura.Lucrare => "lucrare",
+        UnitateMasura.Transport => "transport",
+        UnitateMasura.Procent => "%",
+        _ => um.ToString()
+    };
+
+    private static string NumeCategorie(CategorieProdus categorie) => categorie switch
+    {
+        CategorieProdus.Materiale => "Materiale",
+        CategorieProdus.Consumabile => "Consumabile",
+        CategorieProdus.Feronerie => "Feronerie",
+        CategorieProdus.Servicii => "Servicii",
+        _ => categorie.ToString()
+    };
+
+    private class ModelLinie
+    {
+        public TipRand Tip { get; set; } = TipRand.DinCatalog;
+        public Guid? ProdusId { get; set; }
+        public string Descriere { get; set; } = string.Empty;
+        public decimal Cantitate { get; set; } = 1;
+        public UnitateMasura UM { get; set; } = UnitateMasura.Bucata;
+        public CategorieProdus Categorie { get; set; } = CategorieProdus.Materiale;
+        public decimal PretCost { get; set; }
+        public decimal PretVanzare { get; set; }
+        public decimal ProcentTva { get; set; } = 19m;
+        public bool VizibilClient { get; set; } = true;
+        public string? Nota { get; set; }
+    }
+}

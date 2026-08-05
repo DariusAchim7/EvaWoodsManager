@@ -1,0 +1,32 @@
+@using EvaWoods.Application.Cheltuieli
+@inject ICheltuialaService CheltuialaService
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="_nume" Label="Nume furnizor" Required="true" RequiredError="Numele este obligatoriu." />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Anuleaza">Anulează</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Salveaza" Disabled="_seSalveaza">Salvează</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private string _nume = string.Empty;
+    private bool _seSalveaza;
+
+    private async Task Salveaza()
+    {
+        if (string.IsNullOrWhiteSpace(_nume)) return;
+
+        _seSalveaza = true;
+        var id = await CheltuialaService.AdaugaFurnizorAsync(_nume);
+        _seSalveaza = false;
+
+        MudDialog.Close(DialogResult.Ok(new FurnizorDto(id, _nume)));
+    }
+
+    private void Anuleaza() => MudDialog.Cancel();
+}

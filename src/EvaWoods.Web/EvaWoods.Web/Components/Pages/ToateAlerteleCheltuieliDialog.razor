@@ -1,0 +1,27 @@
+<MudDialog>
+    <DialogContent>
+        @if (Alerte.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">Nicio alertă activă.</MudAlert>
+        }
+        else
+        {
+            <MudStack Spacing="2">
+                @foreach (var alerta in Alerte)
+                {
+                    <MudAlert Severity="@alerta.Item2">@alerta.Item1</MudAlert>
+                }
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Inchide">Închide</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public List<(string, Severity)> Alerte { get; set; } = new();
+
+    private void Inchide() => MudDialog.Close(DialogResult.Ok(true));
+}

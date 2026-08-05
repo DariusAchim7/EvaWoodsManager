@@ -1,0 +1,50 @@
+@using EvaWoods.Application.Proiecte
+@using System.Globalization
+@inject IProiectService ProiectService
+
+<MudDialog>
+    <DialogContent>
+        @if (_activitati is null)
+        {
+            <MudProgressCircular Indeterminate="true" />
+        }
+        else if (_activitati.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">Nicio activitate înregistrată încă.</MudAlert>
+        }
+        else
+        {
+            <MudStack Spacing="3">
+                @foreach (var activitate in _activitati)
+                {
+                    <div>
+                        <MudText Typo="Typo.body2">@activitate.Descriere</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            @FormateazaDataOra(activitate.Data) — @(activitate.Utilizator ?? "Sistem")
+                        </MudText>
+                    </div>
+                }
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Inchide">Închide</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid ProiectId { get; set; }
+
+    private List<ActivitateDto>? _activitati;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _activitati = (await ProiectService.ObtineActivitateRecentaAsync(ProiectId)).ToList();
+    }
+
+    private void Inchide() => MudDialog.Close(DialogResult.Ok(true));
+
+    private static string FormateazaDataOra(DateTime data) =>
+        data.ToLocalTime().ToString("dd MMM yyyy, HH:mm", CultureInfo.GetCultureInfo("ro-RO"));
+}

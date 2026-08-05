@@ -1,0 +1,373 @@
+@using EvaWoods.Application.Cheltuieli
+@using EvaWoods.Domain.Cheltuieli
+@using System.Globalization
+
+<MudDialog Class="rezumat-cheltuieli-dialog-lat">
+    <DialogContent>
+        <MudGrid Class="mb-4">
+            <MudItem xs="6" sm="4" md="3">
+                <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                        <div>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Total fără TVA</MudText>
+                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">@($"{TotalFaraTva:N2} lei")</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@(ProcentDinProiect(TotalFaraTva))% din valoarea proiectului</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Outlined.Description" Color="Color.Primary" Size="Size.Small" />
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="3">
+                <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                        <div>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">TVA total</MudText>
+                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">@($"{TotalTva:N2} lei")</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@(ProcentDinProiect(TotalTva))% din valoarea proiectului</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Outlined.Receipt" Color="Color.Primary" Size="Size.Small" />
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="3">
+                <MudPaper Class="pa-3" Elevation="0" Style="border: 2px solid var(--mud-palette-primary); height: 100%;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                        <div>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Total cu TVA</MudText>
+                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">@($"{TotalCuTva:N2} lei")</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@(ProcentDinProiect(TotalCuTva))% din valoarea proiectului</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.AccountBalanceWallet" Color="Color.Primary" Size="Size.Small" />
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="3">
+                <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                        <div>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Confirmate</MudText>
+                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">@($"{SumaConfirmate:N2} lei")</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@(ProcentDinTotal(SumaConfirmate))% din total</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="3">
+                <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                        <div>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Neconfirmate</MudText>
+                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">@($"{SumaNeconfirmate:N2} lei")</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@(ProcentDinTotal(SumaNeconfirmate))% din total</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Outlined.Schedule" Color="Color.Default" Size="Size.Small" />
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="3">
+                <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                        <div>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Plătite</MudText>
+                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">@($"{SumaPlatite:N2} lei")</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@(ProcentDinTotal(SumaPlatite))% din total</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Outlined.CreditCard" Color="Color.Success" Size="Size.Small" />
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="3">
+                <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                        <div>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Neplătite</MudText>
+                            <MudText Typo="Typo.subtitle1" Class="font-weight-bold">@($"{SumaNeplatite:N2} lei")</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@(ProcentDinTotal(SumaNeplatite))% din total</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Outlined.EventBusy" Color="Color.Warning" Size="Size.Small" />
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Cheltuieli pe status</MudText>
+                    <MudStack Spacing="3">
+                        @foreach (var segment in SegmenteStatus)
+                        {
+                            <div>
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mb-1">
+                                    <MudText Typo="Typo.body2">@segment.Nume</MudText>
+                                    <MudText Typo="Typo.body2">@($"{segment.Suma:N2} lei · {segment.Procent:0.#}%")</MudText>
+                                </MudStack>
+                                <MudProgressLinear Color="@segment.Culoare" Value="@((double)segment.Procent)" Rounded="true" />
+                            </div>
+                        }
+                    </MudStack>
+                    <MudDivider Class="my-2" />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.subtitle2">Total cu TVA</MudText>
+                        <MudText Typo="Typo.subtitle2">@($"{TotalGeneral:N2} lei")</MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Structura cheltuielilor</MudText>
+                    @if (TotalCuTva <= 0)
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio cheltuială confirmată încă.</MudText>
+                    }
+                    else
+                    {
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                            <svg viewBox="0 0 200 200" width="120" height="120">
+                                <circle cx="100" cy="100" r="70" fill="transparent" stroke="#e8e8e8" stroke-width="30" />
+                                @{
+                                    decimal cumulativ = 0;
+                                }
+                                @foreach (var segment in SegmenteCategorii)
+                                {
+                                    <circle cx="100" cy="100" r="70" fill="transparent" stroke="@segment.Culoare" stroke-width="30"
+                                            stroke-dasharray="@($"{ArcLength(segment.Procent)} {CircumferenceStr}")"
+                                            stroke-dashoffset="@ArcOffset(cumulativ)"
+                                            transform="rotate(-90 100 100)">
+                                    </circle>
+                                    cumulativ += segment.Procent;
+                                }
+                            </svg>
+                            <MudStack Spacing="1">
+                                @foreach (var segment in SegmenteCategorii)
+                                {
+                                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                        <div style="@($"width:10px;height:10px;border-radius:50%;background-color:{segment.Culoare};")"></div>
+                                        <MudText Typo="Typo.caption">@segment.Nume — @($"{segment.Suma:N2} lei ({segment.Procent:0.#}%)")</MudText>
+                                    </MudStack>
+                                }
+                            </MudStack>
+                        </MudStack>
+                    }
+                    <MudDivider Class="my-2" />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.subtitle2">Total cu TVA</MudText>
+                        <MudText Typo="Typo.subtitle2">@($"{TotalCuTva:N2} lei")</MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Evoluție lunară (cu TVA)</MudText>
+                    @if (!EvolutieLunara.Any())
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio cheltuială confirmată încă.</MudText>
+                    }
+                    else
+                    {
+                        <MudStack Row="true" AlignItems="AlignItems.End" Spacing="2" Style="height: 120px;">
+                            @foreach (var luna in EvolutieLunara)
+                            {
+                                var inaltimeProcent = MaxEvolutie > 0 ? (double)(luna.Suma / MaxEvolutie * 100) : 0;
+                                <MudStack Style="flex: 1; height: 100%;" Justify="Justify.FlexEnd" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudText Typo="Typo.caption">@($"{luna.Suma:N0}")</MudText>
+                                    <div style="@($"width: 70%; height: {inaltimeProcent}%; background-color: var(--mud-palette-primary); border-radius: 4px 4px 0 0; min-height: 2px;")"></div>
+                                </MudStack>
+                            }
+                        </MudStack>
+                        <MudStack Row="true" Spacing="2" Class="mt-1">
+                            @foreach (var luna in EvolutieLunara)
+                            {
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary" Style="flex: 1; text-align: center;">@luna.Luna</MudText>
+                            }
+                        </MudStack>
+                    }
+                    <MudDivider Class="my-2" />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.subtitle2">Total perioadă</MudText>
+                        <MudText Typo="Typo.subtitle2">@($"{TotalCuTva:N2} lei")</MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <MudPaper Class="pa-4 mt-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                <MudText Typo="Typo.subtitle1">Ultimele cheltuieli</MudText>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="Inchide">
+                    Vezi toate cheltuielile
+                </MudButton>
+            </MudStack>
+
+            @if (!UltimeleCheltuieli.Any())
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">Nicio cheltuială înregistrată încă.</MudText>
+            }
+            else
+            {
+                <MudTable Items="@UltimeleCheltuieli" Hover="true" Dense="true">
+                    <HeaderContent>
+                        <MudTh>Data</MudTh>
+                        <MudTh>Descriere</MudTh>
+                        <MudTh>Categorie</MudTh>
+                        <MudTh>Furnizor</MudTh>
+                        <MudTh>Total cu TVA</MudTh>
+                        <MudTh>Status</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Data">@context.Data.ToString("dd MMM yyyy")</MudTd>
+                        <MudTd DataLabel="Descriere">@context.Descriere</MudTd>
+                        <MudTd DataLabel="Categorie">
+                            <MudChip T="string" Size="Size.Small" Color="@CuloareCategorie(context.Categorie)">@NumeCategorie(context.Categorie)</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Furnizor">@(context.FurnizorNume ?? "-")</MudTd>
+                        <MudTd DataLabel="Total cu TVA">@($"{context.Total:N2} lei")</MudTd>
+                        <MudTd DataLabel="Status">
+                            @if (context.Status == StatusCheltuiala.Ciorna)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Default">Ciornă</MudChip>
+                            }
+                            else if (context.StatusPlata == StatusPlata.Platita)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success">Plătită</MudChip>
+                            }
+                            else
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Warning">În așteptare</MudChip>
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary mt-1">
+                    1-@(UltimeleCheltuieli.Count) din @(Cheltuieli.Count) cheltuieli
+                </MudText>
+            }
+        </MudPaper>
+    </DialogContent>
+    <DialogActions>
+        <MudTooltip Text="În curând">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.FileDownload" Disabled="true">
+                Exportă raportul
+            </MudButton>
+        </MudTooltip>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Inchide">Închide</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public List<CheltuialaDto> Cheltuieli { get; set; } = new();
+    [Parameter] public decimal ValoareProiect { get; set; }
+
+    private const decimal RaycaDonut = 70m;
+    private static decimal Circumference => 2m * (decimal)Math.PI * RaycaDonut;
+    private static string CircumferenceStr => Circumference.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static string ArcLength(decimal procent) =>
+        (Circumference * procent / 100m).ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static string ArcOffset(decimal cumulativProcent) =>
+        (-(Circumference * cumulativProcent / 100m)).ToString("0.##", CultureInfo.InvariantCulture);
+
+    private IEnumerable<CheltuialaDto> Confirmate => Cheltuieli.Where(c => c.Status == StatusCheltuiala.Confirmata);
+    private IEnumerable<CheltuialaDto> Neconfirmate => Cheltuieli.Where(c => c.Status == StatusCheltuiala.Ciorna);
+
+    private decimal TotalFaraTva => Confirmate.Sum(c => c.ValoareFaraTva);
+    private decimal TotalTva => Confirmate.Sum(c => c.Tva);
+    private decimal TotalCuTva => Confirmate.Sum(c => c.Total);
+
+    private decimal SumaConfirmate => Confirmate.Sum(c => c.Total);
+    private decimal SumaNeconfirmate => Neconfirmate.Sum(c => c.Total);
+
+    private decimal SumaPlatite => Confirmate.Where(c => c.StatusPlata == StatusPlata.Platita).Sum(c => c.Total);
+    private decimal SumaNeplatite => Confirmate.Where(c => c.StatusPlata == StatusPlata.InAsteptare).Sum(c => c.Total);
+
+    private decimal TotalGeneral => SumaConfirmate + SumaNeconfirmate;
+
+    private string ProcentDinProiect(decimal suma) =>
+        ValoareProiect > 0 ? (suma / ValoareProiect * 100).ToString("0.#") : "0";
+
+    private string ProcentDinTotal(decimal suma) =>
+        TotalGeneral > 0 ? (suma / TotalGeneral * 100).ToString("0.#") : "0";
+
+    private record SegmentStatus(string Nume, decimal Suma, decimal Procent, Color Culoare);
+
+    private List<SegmentStatus> SegmenteStatus
+    {
+        get
+        {
+            var total = TotalGeneral;
+            if (total <= 0) return new List<SegmentStatus>();
+
+            return new List<SegmentStatus>
+            {
+                new("Plătite", SumaPlatite, SumaPlatite / total * 100, Color.Success),
+                new("În așteptare", SumaNeplatite, SumaNeplatite / total * 100, Color.Warning),
+                new("Neconfirmate", SumaNeconfirmate, SumaNeconfirmate / total * 100, Color.Info),
+                new("Anulate", 0, 0, Color.Default)
+            };
+        }
+    }
+
+    private decimal SumaCategorie(CategorieCheltuiala categorie) =>
+        Confirmate.Where(c => c.Categorie == categorie).Sum(c => c.Total);
+
+    private record SegmentCategorie(string Nume, decimal Suma, decimal Procent, string Culoare);
+
+    private List<SegmentCategorie> SegmenteCategorii
+    {
+        get
+        {
+            var total = TotalCuTva;
+            if (total <= 0) return new List<SegmentCategorie>();
+
+            var materiale = SumaCategorie(CategorieCheltuiala.Materiale);
+            var servicii = SumaCategorie(CategorieCheltuiala.Servicii);
+            var alte = SumaCategorie(CategorieCheltuiala.AlteCheltuieli);
+
+            return new List<SegmentCategorie>
+            {
+                new("Materiale", materiale, materiale / total * 100, "#42A5F5"),
+                new("Servicii", servicii, servicii / total * 100, "#AB47BC"),
+                new("Alte cheltuieli", alte, alte / total * 100, "#FFA726")
+            };
+        }
+    }
+
+    private record LunaEvolutie(string Luna, decimal Suma);
+
+    private List<LunaEvolutie> EvolutieLunara =>
+        Confirmate
+            .GroupBy(c => new { c.Data.Year, c.Data.Month })
+            .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month)
+            .Select(g => new LunaEvolutie(
+                new DateTime(g.Key.Year, g.Key.Month, 1).ToString("MMM", CultureInfo.GetCultureInfo("ro-RO")),
+                g.Sum(c => c.Total)))
+            .TakeLast(6)
+            .ToList();
+
+    private decimal MaxEvolutie => EvolutieLunara.Any() ? EvolutieLunara.Max(l => l.Suma) : 1;
+
+    private List<CheltuialaDto> UltimeleCheltuieli => Cheltuieli.OrderByDescending(c => c.Data).Take(5).ToList();
+
+    private void Inchide() => MudDialog.Close(DialogResult.Ok(true));
+
+    private static string NumeCategorie(CategorieCheltuiala categorie) => categorie switch
+    {
+        CategorieCheltuiala.Materiale => "Materiale",
+        CategorieCheltuiala.Servicii => "Servicii",
+        CategorieCheltuiala.AlteCheltuieli => "Alte cheltuieli",
+        _ => categorie.ToString()
+    };
+
+    private static Color CuloareCategorie(CategorieCheltuiala categorie) => categorie switch
+    {
+        CategorieCheltuiala.Materiale => Color.Info,
+        CategorieCheltuiala.Servicii => Color.Secondary,
+        CategorieCheltuiala.AlteCheltuieli => Color.Warning,
+        _ => Color.Default
+    };
+}

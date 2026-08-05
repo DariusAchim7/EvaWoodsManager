@@ -1,0 +1,23 @@
+<MudPaper Class="pa-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+        <MudStack Spacing="1">
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">@Title</MudText>
+            <MudText Typo="Typo.h4" Class="font-weight-bold">@Value</MudText>
+            @if (!string.IsNullOrWhiteSpace(Subtitle))
+            {
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">@Subtitle</MudText>
+            }
+        </MudStack>
+        <MudAvatar Color="@Color" Variant="Variant.Filled" Size="Size.Medium">
+            <MudIcon Icon="@Icon" Size="Size.Small" />
+        </MudAvatar>
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Value { get; set; } = string.Empty;
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter, EditorRequired] public string Icon { get; set; } = string.Empty;
+    [Parameter] public Color Color { get; set; } = Color.Primary;
+}
