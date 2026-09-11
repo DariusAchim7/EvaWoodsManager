@@ -1,10 +1,25 @@
 namespace EvaWoods.Application.Materiale;
 
-public record PiesaDeAsezat(Guid PiesaId, string? Nume, decimal LungimeMm, decimal LatimeMm, bool PoateRoti);
+public record PiesaDeAsezat(
+    Guid PiesaId,
+    string? Nume,
+    decimal LungimeMm,
+    decimal LatimeMm,
+    bool PoateRoti);
 
-public record PlasarePiesa(Guid PiesaId, string? Nume, decimal X, decimal Y, decimal LungimeMm, decimal LatimeMm, bool Rotita);
+public record PlasarePiesa(
+    Guid PiesaId,
+    string? Nume,
+    decimal X,
+    decimal Y,
+    decimal LungimeMm,
+    decimal LatimeMm,
+    bool Rotita);
 
-public record FoaieRezultat(int Numar, List<PlasarePiesa> Plasari, decimal UtilizareProcent);
+public record FoaieRezultat(
+    int Numar,
+    List<PlasarePiesa> Plasari,
+    decimal UtilizareProcent);
 
 public record RezultatOptimizare(
     int NumarFoi,
@@ -14,18 +29,45 @@ public record RezultatOptimizare(
 
 public static class OptimizatorDebitare
 {
-    private record DreptunghiLiber(decimal X, decimal Y, decimal Latime, decimal Inaltime);
+    private record DreptunghiLiber(
+        decimal X,
+        decimal Y,
+        decimal Latime,
+        decimal Inaltime);
 
-    private class FoaieInLucru
+    private enum TipSplit
+    {
+        DeasupraPeToataLatimea,
+        DreaptaPeToataInaltimea
+    }
+
+    private sealed class FoaieInLucru
     {
         public List<PlasarePiesa> Plasari { get; } = new();
+
         public List<DreptunghiLiber> Libere { get; } = new();
+
         public decimal SuprafataOcupataMm2 { get; set; }
     }
 
+    private sealed record CandidatPlasare(
+        FoaieInLucru Foaie,
+        DreptunghiLiber Liber,
+        bool Rotit,
+        decimal LatimePiesa,
+        decimal InaltimePiesa,
+        TipSplit Split,
+        decimal LongSideFit,
+        decimal ShortSideFit,
+        decimal SuprafataLiberaDupaSplit,
+        decimal CelMaiMareRestMm2);
+
     /// <summary>
-    /// Așază piesele pe foi folosind algoritmul guillotine (tăieturi drepte, ca la panel saw).
-    /// Marginea de curățare se scade de pe fiecare latură a foii; kerf-ul se consumă la fiecare tăietură.
+    /// Optimizeaza asezarea pieselor pe foi PAL folosind o strategie
+    /// guillotine, potrivita pentru debitare cu circular / panel saw.
+    ///
+    /// Marginea de curatare este eliminata din toate cele 4 laturi.
+    /// Kerf-ul este consumat la fiecare separare intre piesa si rest.
     /// </summary>
     public static RezultatOptimizare Optimizeaza(
         IReadOnlyList<PiesaDeAsezat> piese,
@@ -34,130 +76,554 @@ public static class OptimizatorDebitare
         decimal kerfMm,
         decimal margineCuratareMm)
     {
-        var latimeUtila = lungimeFoaieMm - 2 * margineCuratareMm;
-        var inaltimeUtila = latimeFoaieMm - 2 * margineCuratareMm;
+        if (lungimeFoaieMm <= 0)
+            throw new ArgumentOutOfRangeException(nameof(lungimeFoaieMm));
+
+        if (latimeFoaieMm <= 0)
+            throw new ArgumentOutOfRangeException(nameof(latimeFoaieMm));
+
+        if (kerfMm < 0)
+            throw new ArgumentOutOfRangeException(nameof(kerfMm));
+
+        if (margineCuratareMm < 0)
+            throw new ArgumentOutOfRangeException(nameof(margineCuratareMm));
+
+        var latimeUtila =
+            lungimeFoaieMm - 2 * margineCuratareMm;
+
+        var inaltimeUtila =
+            latimeFoaieMm - 2 * margineCuratareMm;
+
+        if (latimeUtila <= 0 || inaltimeUtila <= 0)
+        {
+            throw new ArgumentException(
+                "Marginea de curatare este prea mare pentru dimensiunea foii.");
+        }
 
         var neplasabile = new List<string>();
         var deAsezat = new List<PiesaDeAsezat>();
 
         foreach (var piesa in piese)
         {
-            var incapeNormal = piesa.LungimeMm <= latimeUtila && piesa.LatimeMm <= inaltimeUtila;
-            var incapeRotit = piesa.PoateRoti && piesa.LatimeMm <= latimeUtila && piesa.LungimeMm <= inaltimeUtila;
+            if (piesa.LungimeMm <= 0 || piesa.LatimeMm <= 0)
+            {
+                neplasabile.Add(
+                    $"{piesa.Nume ?? "Piesa"} are dimensiuni invalide.");
+
+                continue;
+            }
+
+            var incapeNormal =
+                piesa.LungimeMm <= latimeUtila &&
+                piesa.LatimeMm <= inaltimeUtila;
+
+            var incapeRotit =
+                piesa.PoateRoti &&
+                piesa.LatimeMm <= latimeUtila &&
+                piesa.LungimeMm <= inaltimeUtila;
 
             if (!incapeNormal && !incapeRotit)
             {
-                neplasabile.Add($"{piesa.Nume ?? "Piesă"} {piesa.LungimeMm:0.#} × {piesa.LatimeMm:0.#} mm depășește placa utilă {latimeUtila:0.#} × {inaltimeUtila:0.#} mm");
+                neplasabile.Add(
+                    $"{piesa.Nume ?? "Piesa"} " +
+                    $"{piesa.LungimeMm:0.#} x {piesa.LatimeMm:0.#} mm " +
+                    $"depaseste placa utila " +
+                    $"{latimeUtila:0.#} x {inaltimeUtila:0.#} mm");
+
                 continue;
             }
 
             deAsezat.Add(piesa);
         }
 
-        // Sortare descrescătoare după suprafață - piesele mari primele
-        deAsezat = deAsezat.OrderByDescending(p => p.LungimeMm * p.LatimeMm).ToList();
+        /*
+         * IMPORTANT
+         *
+         * Nu sortam doar dupa suprafata.
+         *
+         * Piesele lungi sunt de obicei mai greu de asezat dupa
+         * fragmentarea foii, asa ca le prioritizam.
+         */
+        deAsezat = deAsezat
+            .OrderByDescending(
+                p => Math.Max(p.LungimeMm, p.LatimeMm))
+            .ThenByDescending(
+                p => Math.Min(p.LungimeMm, p.LatimeMm))
+            .ThenByDescending(
+                p => p.LungimeMm * p.LatimeMm)
+            .ToList();
 
         var foi = new List<FoaieInLucru>();
 
         foreach (var piesa in deAsezat)
         {
-            if (!IncearcaPlaseaza(foi, piesa, kerfMm))
+            if (IncearcaPlaseaza(
+                    foi,
+                    piesa,
+                    kerfMm))
             {
-                var foaieNoua = new FoaieInLucru();
-                foaieNoua.Libere.Add(new DreptunghiLiber(0, 0, latimeUtila, inaltimeUtila));
-                foi.Add(foaieNoua);
+                continue;
+            }
 
-                IncearcaPlaseaza(new List<FoaieInLucru> { foaieNoua }, piesa, kerfMm);
+            var foaieNoua = CreeazaFoaie(
+                latimeUtila,
+                inaltimeUtila);
+
+            foi.Add(foaieNoua);
+
+            var plasat = IncearcaPlaseaza(
+                new List<FoaieInLucru> { foaieNoua },
+                piesa,
+                kerfMm);
+
+            /*
+             * In mod normal nu ar trebui sa ajungem aici deoarece
+             * piesele imposibile au fost filtrate mai sus.
+             */
+            if (!plasat)
+            {
+                neplasabile.Add(
+                    $"{piesa.Nume ?? "Piesa"} " +
+                    $"{piesa.LungimeMm:0.#} x {piesa.LatimeMm:0.#} mm " +
+                    $"nu a putut fi plasata.");
             }
         }
 
-        var suprafataUtilaFoaieMm2 = latimeUtila * inaltimeUtila;
-        var foiRezultat = foi.Select((foaie, index) => new FoaieRezultat(
-            index + 1,
-            foaie.Plasari,
-            suprafataUtilaFoaieMm2 > 0 ? Math.Round(foaie.SuprafataOcupataMm2 / suprafataUtilaFoaieMm2 * 100, 1) : 0)).ToList();
+        var suprafataUtilaFoaieMm2 =
+            latimeUtila * inaltimeUtila;
 
-        var utilizareTotala = foi.Count > 0 && suprafataUtilaFoaieMm2 > 0
-            ? Math.Round(foi.Sum(f => f.SuprafataOcupataMm2) / (foi.Count * suprafataUtilaFoaieMm2) * 100, 1)
-            : 0;
+        var foiRezultat = foi
+            .Select(
+                (foaie, index) =>
+                    new FoaieRezultat(
+                        index + 1,
+                        foaie.Plasari,
+                        suprafataUtilaFoaieMm2 > 0
+                            ? Math.Round(
+                                foaie.SuprafataOcupataMm2 /
+                                suprafataUtilaFoaieMm2 *
+                                100,
+                                1)
+                            : 0))
+            .ToList();
 
-        return new RezultatOptimizare(foi.Count, foiRezultat, utilizareTotala, neplasabile);
+        var utilizareTotala =
+            foi.Count > 0 &&
+            suprafataUtilaFoaieMm2 > 0
+                ? Math.Round(
+                    foi.Sum(
+                        f => f.SuprafataOcupataMm2) /
+                    (foi.Count *
+                     suprafataUtilaFoaieMm2) *
+                    100,
+                    1)
+                : 0;
+
+        return new RezultatOptimizare(
+            foi.Count,
+            foiRezultat,
+            utilizareTotala,
+            neplasabile);
     }
 
-    private static bool IncearcaPlaseaza(List<FoaieInLucru> foi, PiesaDeAsezat piesa, decimal kerf)
+    private static FoaieInLucru CreeazaFoaie(
+        decimal latimeUtila,
+        decimal inaltimeUtila)
     {
-        FoaieInLucru? celMaiBunFoaie = null;
-        DreptunghiLiber? celMaiBunLiber = null;
-        var celMaiBunRotit = false;
-        var celMaiBunScor = decimal.MaxValue;
+        var foaie = new FoaieInLucru();
+
+        foaie.Libere.Add(
+            new DreptunghiLiber(
+                0,
+                0,
+                latimeUtila,
+                inaltimeUtila));
+
+        return foaie;
+    }
+
+    private static bool IncearcaPlaseaza(
+        List<FoaieInLucru> foi,
+        PiesaDeAsezat piesa,
+        decimal kerf)
+    {
+        CandidatPlasare? celMaiBun = null;
 
         foreach (var foaie in foi)
         {
             foreach (var liber in foaie.Libere)
             {
-                // Orientare normală
-                if (piesa.LungimeMm <= liber.Latime && piesa.LatimeMm <= liber.Inaltime)
-                {
-                    var scor = Math.Min(liber.Latime - piesa.LungimeMm, liber.Inaltime - piesa.LatimeMm);
-                    if (scor < celMaiBunScor)
-                    {
-                        celMaiBunScor = scor;
-                        celMaiBunFoaie = foaie;
-                        celMaiBunLiber = liber;
-                        celMaiBunRotit = false;
-                    }
-                }
+                /*
+                 * Orientare normala
+                 */
+                EvalueazaOrientare(
+                    foaie,
+                    liber,
+                    piesa.LungimeMm,
+                    piesa.LatimeMm,
+                    rotit: false,
+                    kerf,
+                    ref celMaiBun);
 
-                // Orientare rotită 90°
-                if (piesa.PoateRoti && piesa.LatimeMm <= liber.Latime && piesa.LungimeMm <= liber.Inaltime)
+                /*
+                 * Orientare rotita
+                 */
+                if (piesa.PoateRoti &&
+                    piesa.LungimeMm != piesa.LatimeMm)
                 {
-                    var scor = Math.Min(liber.Latime - piesa.LatimeMm, liber.Inaltime - piesa.LungimeMm);
-                    if (scor < celMaiBunScor)
-                    {
-                        celMaiBunScor = scor;
-                        celMaiBunFoaie = foaie;
-                        celMaiBunLiber = liber;
-                        celMaiBunRotit = true;
-                    }
+                    EvalueazaOrientare(
+                        foaie,
+                        liber,
+                        piesa.LatimeMm,
+                        piesa.LungimeMm,
+                        rotit: true,
+                        kerf,
+                        ref celMaiBun);
                 }
             }
         }
 
-        if (celMaiBunFoaie is null || celMaiBunLiber is null) return false;
+        if (celMaiBun is null)
+            return false;
 
-        var latimePiesa = celMaiBunRotit ? piesa.LatimeMm : piesa.LungimeMm;
-        var inaltimePiesa = celMaiBunRotit ? piesa.LungimeMm : piesa.LatimeMm;
-
-        celMaiBunFoaie.Plasari.Add(new PlasarePiesa(
-            piesa.PiesaId, piesa.Nume,
-            celMaiBunLiber.X, celMaiBunLiber.Y,
-            latimePiesa, inaltimePiesa, celMaiBunRotit));
-
-        celMaiBunFoaie.SuprafataOcupataMm2 += latimePiesa * inaltimePiesa;
-        celMaiBunFoaie.Libere.Remove(celMaiBunLiber);
-
-        // Împărțire guillotine: dreptunghi la dreapta + dreptunghi deasupra (cu kerf consumat)
-        var latimeRamasa = celMaiBunLiber.Latime - latimePiesa - kerf;
-        var inaltimeRamasa = celMaiBunLiber.Inaltime - inaltimePiesa - kerf;
-
-        if (latimeRamasa > 0)
-        {
-            celMaiBunFoaie.Libere.Add(new DreptunghiLiber(
-                celMaiBunLiber.X + latimePiesa + kerf,
-                celMaiBunLiber.Y,
-                latimeRamasa,
-                inaltimePiesa));
-        }
-
-        if (inaltimeRamasa > 0)
-        {
-            celMaiBunFoaie.Libere.Add(new DreptunghiLiber(
-                celMaiBunLiber.X,
-                celMaiBunLiber.Y + inaltimePiesa + kerf,
-                celMaiBunLiber.Latime,
-                inaltimeRamasa));
-        }
+        AplicaPlasare(
+            celMaiBun,
+            piesa,
+            kerf);
 
         return true;
+    }
+
+    private static void EvalueazaOrientare(
+        FoaieInLucru foaie,
+        DreptunghiLiber liber,
+        decimal latimePiesa,
+        decimal inaltimePiesa,
+        bool rotit,
+        decimal kerf,
+        ref CandidatPlasare? celMaiBun)
+    {
+        if (latimePiesa > liber.Latime ||
+            inaltimePiesa > liber.Inaltime)
+        {
+            return;
+        }
+
+        var diferentaLatime =
+            liber.Latime - latimePiesa;
+
+        var diferentaInaltime =
+            liber.Inaltime - inaltimePiesa;
+
+        /*
+         * Best Long Side Fit.
+         *
+         * Preferam plasarea care lasa cea mai mica
+         * diferenta pe latura cea mai "slaba".
+         */
+        var longSideFit =
+            Math.Max(
+                diferentaLatime,
+                diferentaInaltime);
+
+        var shortSideFit =
+            Math.Min(
+                diferentaLatime,
+                diferentaInaltime);
+
+        /*
+         * Testam ambele tipuri de split guillotine.
+         */
+        foreach (var split in Enum.GetValues<TipSplit>())
+        {
+            var resturi = CalculeazaResturi(
+                liber,
+                latimePiesa,
+                inaltimePiesa,
+                kerf,
+                split);
+
+            var suprafataLibera =
+                resturi.Sum(
+                    r => r.Latime * r.Inaltime);
+
+            var celMaiMareRest =
+                resturi.Count > 0
+                    ? resturi.Max(
+                        r => r.Latime * r.Inaltime)
+                    : 0;
+
+            var candidat =
+                new CandidatPlasare(
+                    foaie,
+                    liber,
+                    rotit,
+                    latimePiesa,
+                    inaltimePiesa,
+                    split,
+                    longSideFit,
+                    shortSideFit,
+                    suprafataLibera,
+                    celMaiMareRest);
+
+            if (EsteMaiBun(
+                    candidat,
+                    celMaiBun))
+            {
+                celMaiBun = candidat;
+            }
+        }
+    }
+
+    private static bool EsteMaiBun(
+        CandidatPlasare candidat,
+        CandidatPlasare? actual)
+    {
+        if (actual is null)
+            return true;
+
+        /*
+         * 1. Minimizam latura ramasa cea mai mare.
+         */
+        if (candidat.LongSideFit <
+            actual.LongSideFit)
+        {
+            return true;
+        }
+
+        if (candidat.LongSideFit >
+            actual.LongSideFit)
+        {
+            return false;
+        }
+
+        /*
+         * 2. La egalitate, minimizam si restul
+         *    de pe cealalta latura.
+         */
+        if (candidat.ShortSideFit <
+            actual.ShortSideFit)
+        {
+            return true;
+        }
+
+        if (candidat.ShortSideFit >
+            actual.ShortSideFit)
+        {
+            return false;
+        }
+
+        /*
+         * 3. Preferam split-ul care conserva
+         *    mai multa suprafata utilizabila.
+         */
+        if (candidat.SuprafataLiberaDupaSplit >
+            actual.SuprafataLiberaDupaSplit)
+        {
+            return true;
+        }
+
+        if (candidat.SuprafataLiberaDupaSplit <
+            actual.SuprafataLiberaDupaSplit)
+        {
+            return false;
+        }
+
+        /*
+         * 4. Daca si asta este egal,
+         *    preferam un rest mare continuu
+         *    in loc de multe fragmente mici.
+         */
+        if (candidat.CelMaiMareRestMm2 >
+            actual.CelMaiMareRestMm2)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static void AplicaPlasare(
+        CandidatPlasare candidat,
+        PiesaDeAsezat piesa,
+        decimal kerf)
+    {
+        var foaie = candidat.Foaie;
+        var liber = candidat.Liber;
+
+        foaie.Plasari.Add(
+            new PlasarePiesa(
+                piesa.PiesaId,
+                piesa.Nume,
+                liber.X,
+                liber.Y,
+                candidat.LatimePiesa,
+                candidat.InaltimePiesa,
+                candidat.Rotit));
+
+        foaie.SuprafataOcupataMm2 +=
+            candidat.LatimePiesa *
+            candidat.InaltimePiesa;
+
+        foaie.Libere.Remove(liber);
+
+        var resturi =
+            CalculeazaResturi(
+                liber,
+                candidat.LatimePiesa,
+                candidat.InaltimePiesa,
+                kerf,
+                candidat.Split);
+
+        foreach (var rest in resturi)
+        {
+            if (rest.Latime > 0 &&
+                rest.Inaltime > 0)
+            {
+                foaie.Libere.Add(rest);
+            }
+        }
+
+        /*
+         * Eliminam eventualele dreptunghiuri
+         * complet continute in altele.
+         */
+        EliminaLibereRedundante(
+            foaie.Libere);
+    }
+
+    private static List<DreptunghiLiber> CalculeazaResturi(
+        DreptunghiLiber liber,
+        decimal latimePiesa,
+        decimal inaltimePiesa,
+        decimal kerf,
+        TipSplit split)
+    {
+        var rezultate =
+            new List<DreptunghiLiber>();
+
+        var latimeRamasa =
+            liber.Latime -
+            latimePiesa -
+            kerf;
+
+        var inaltimeRamasa =
+            liber.Inaltime -
+            inaltimePiesa -
+            kerf;
+
+        switch (split)
+        {
+            /*
+             * +---------------------------+
+             * |                           |
+             * |        DEASUPRA           |
+             * |                           |
+             * +-------------+-------------+
+             * |    PIESA    |   DREAPTA   |
+             * +-------------+-------------+
+             */
+            case TipSplit.DeasupraPeToataLatimea:
+            {
+                if (latimeRamasa > 0)
+                {
+                    rezultate.Add(
+                        new DreptunghiLiber(
+                            liber.X +
+                            latimePiesa +
+                            kerf,
+                            liber.Y,
+                            latimeRamasa,
+                            inaltimePiesa));
+                }
+
+                if (inaltimeRamasa > 0)
+                {
+                    rezultate.Add(
+                        new DreptunghiLiber(
+                            liber.X,
+                            liber.Y +
+                            inaltimePiesa +
+                            kerf,
+                            liber.Latime,
+                            inaltimeRamasa));
+                }
+
+                break;
+            }
+
+            /*
+             * +-------------+-------------+
+             * |  DEASUPRA   |             |
+             * |             |             |
+             * +-------------+   DREAPTA   |
+             * |    PIESA    |             |
+             * +-------------+-------------+
+             */
+            case TipSplit.DreaptaPeToataInaltimea:
+            {
+                if (latimeRamasa > 0)
+                {
+                    rezultate.Add(
+                        new DreptunghiLiber(
+                            liber.X +
+                            latimePiesa +
+                            kerf,
+                            liber.Y,
+                            latimeRamasa,
+                            liber.Inaltime));
+                }
+
+                if (inaltimeRamasa > 0)
+                {
+                    rezultate.Add(
+                        new DreptunghiLiber(
+                            liber.X,
+                            liber.Y +
+                            inaltimePiesa +
+                            kerf,
+                            latimePiesa,
+                            inaltimeRamasa));
+                }
+
+                break;
+            }
+        }
+
+        return rezultate;
+    }
+
+    private static void EliminaLibereRedundante(
+        List<DreptunghiLiber> libere)
+    {
+        for (var i = libere.Count - 1; i >= 0; i--)
+        {
+            for (var j = 0; j < libere.Count; j++)
+            {
+                if (i == j)
+                    continue;
+
+                if (EsteInclus(
+                        libere[i],
+                        libere[j]))
+                {
+                    libere.RemoveAt(i);
+                    break;
+                }
+            }
+        }
+    }
+
+    private static bool EsteInclus(
+        DreptunghiLiber mic,
+        DreptunghiLiber mare)
+    {
+        return
+            mic.X >= mare.X &&
+            mic.Y >= mare.Y &&
+            mic.X + mic.Latime <=
+            mare.X + mare.Latime &&
+            mic.Y + mic.Inaltime <=
+            mare.Y + mare.Inaltime;
     }
 }
