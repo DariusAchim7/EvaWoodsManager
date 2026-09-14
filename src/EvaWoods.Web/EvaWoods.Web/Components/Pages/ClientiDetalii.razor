@@ -95,7 +95,7 @@ else
     }
     else
     {
-        <MudTable Items="@_proiecte" Hover="true" Dense="true" T="ProiectDto"
+        <MudTable Items="@_proiecte" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm" T="ProiectDto"
           OnRowClick="@((TableRowClickEventArgs<ProiectDto> e) => NavigheazaLaProiect(e.Item.Id))">
             <HeaderContent>
                 <MudTh>Proiect</MudTh>

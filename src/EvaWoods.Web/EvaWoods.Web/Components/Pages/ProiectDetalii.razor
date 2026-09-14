@@ -648,7 +648,7 @@ else
                                         Combină duplicatele
                                     </MudButton>
                                 </MudStack>
-                                <MudTable Items="@_piese" Hover="true" Dense="true">
+                                <MudTable Items="@_piese" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm">
                                     <HeaderContent>
                                         <MudTh>Denumire</MudTh>
                                         <MudTh>Dimensiuni</MudTh>
@@ -761,7 +761,7 @@ else
                             {
                                 <MudPaper Class="pa-4 mb-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
                                     <MudText Typo="Typo.h6" Class="mb-3">Materiale pe plăci</MudText>
-                                    <MudTable Items="@_calcule" Hover="true" Dense="true" T="CalculMaterialDto" OnRowClick="@(args => DeschideDialogPlanTaiere(args.Item))" RowStyle="cursor: pointer;">
+                                    <MudTable Items="@_calcule" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm" T="CalculMaterialDto" OnRowClick="@(args => DeschideDialogPlanTaiere(args.Item))" RowStyle="cursor: pointer;">
                                         <HeaderContent>
                                             <MudTh>Material</MudTh>
                                             <MudTh>Grosime</MudTh>
@@ -836,7 +836,7 @@ else
                                     }
                                     else
                                     {
-                                        <MudTable Items="@GrupuriCant" Hover="true" Dense="true">
+                                        <MudTable Items="@GrupuriCant" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm">
                                             <HeaderContent>
                                                 <MudTh>Cant</MudTh>
                                                 <MudTh>Necesar calculat</MudTh>
@@ -964,7 +964,7 @@ else
                                                 </MudPaper>
                                             }
                                         }
-                                        <MudTable Items="@_liniiOferta" Hover="true" Dense="true">
+                                        <MudTable Items="@_liniiOferta" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm">
                                             <HeaderContent>
                                                 <MudTh>Descriere</MudTh>
                                                 <MudTh>Sursă</MudTh>
@@ -1168,7 +1168,7 @@ else
                                 </MudPaper>
                             }
 
-                            <MudTable Items="@_cheltuieli" Hover="true" Dense="true" Filter="@FiltruCheltuieli">
+                            <MudTable Items="@_cheltuieli" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm" Filter="@FiltruCheltuieli">
                                 <HeaderContent>
                                     <MudTh>Data</MudTh>
                                     <MudTh>Descriere</MudTh>

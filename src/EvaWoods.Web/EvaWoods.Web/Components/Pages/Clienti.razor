@@ -46,7 +46,7 @@
         }
         else
         {
-            <MudTable Items="@_clienti" Hover="true" Dense="true" T="ClientDto"
+            <MudTable Items="@_clienti" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm" T="ClientDto"
                       OnRowClick="@((TableRowClickEventArgs<ClientDto> e) => SelecteazaClient(e.Item))">
                 <HeaderContent>
                     <MudTh>Client</MudTh>
