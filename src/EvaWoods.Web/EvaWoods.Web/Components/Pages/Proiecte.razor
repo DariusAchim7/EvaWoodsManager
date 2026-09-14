@@ -10,36 +10,37 @@
 <PageTitle>Proiecte</PageTitle>
 
 <MudText Typo="Typo.h4" Class="mb-1">Proiecte</MudText>
-<MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+<MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary d-none d-md-block">
     Gestionează toate proiectele de mobilier, de la ofertare până la montaj.
 </MudText>
 
 @if (!_seIncarca)
 {
-    <MudGrid Class="mb-4">
-        <MudItem xs="12" sm="6" md="3">
+    <MudGrid Spacing="2" Class="mb-4 mt-1">
+        <MudItem xs="6" md="3">
             <KpiCard Title="Proiecte active" Value="@ProiecteActive.ToString()" Icon="@Icons.Material.Filled.Groups" Color="Color.Primary" />
         </MudItem>
-        <MudItem xs="12" sm="6" md="3">
+        <MudItem xs="6" md="3">
             <KpiCard Title="Oferte în lucru" Value="@OferteInLucru.ToString()" Icon="@Icons.Material.Filled.Description" Color="Color.Warning" />
         </MudItem>
-        <MudItem xs="12" sm="6" md="3">
+        <MudItem xs="6" md="3">
             <KpiCard Title="Montaje programate" Value="@MontajeProgramate.ToString()" Icon="@Icons.Material.Filled.LocalShipping" Color="Color.Info" />
         </MudItem>
-        <MudItem xs="12" sm="6" md="3">
+        <MudItem xs="6" md="3">
             <KpiCard Title="Valoare totală" Value="@ValoareTotalaFormatata" Subtitle="lei" Icon="@Icons.Material.Filled.Payments" Color="Color.Success" />
         </MudItem>
     </MudGrid>
 }
 
-<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4 d-none d-md-flex">
     <MudText Typo="Typo.h6">Proiecte (@(_proiecte?.Count ?? 0))</MudText>
     <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="DeschideDialogAdaugaProiect">
         Adaugă proiect
     </MudButton>
 </MudStack>
 
-<MudGrid>
+@* ===================== DESKTOP: tabel + panou detalii ===================== *@
+<MudGrid Class="d-none d-md-flex">
     <MudItem xs="12" md="8">
         @if (_seIncarca)
         {
@@ -51,7 +52,13 @@
         }
         else
         {
+            <MudTextField T="string" @bind-Value="_cautare" Immediate="true" Clearable="true"
+                          Placeholder="Caută proiect (nume, client, cod)..."
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Margin="Margin.Dense" Class="mb-3" />
+
             <MudTable Items="@_proiecte" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm" T="ProiectDto"
+                      Filter="@FiltruProiecte"
                       OnRowClick="@((TableRowClickEventArgs<ProiectDto> e) => SelecteazaProiect(e.Item))">
                 <HeaderContent>
                     <MudTh>Proiect</MudTh>
@@ -164,6 +171,88 @@
     </MudItem>
 </MudGrid>
 
+@* ===================== MOBIL: listă de carduri ===================== *@
+<div class="d-md-none">
+    @if (_seIncarca)
+    {
+        <MudProgressCircular Indeterminate="true" Class="my-8" />
+    }
+    else if (_proiecte is { Count: 0 })
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-3">Nu ai încă niciun proiect.</MudAlert>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Large"
+                   StartIcon="@Icons.Material.Filled.Add" OnClick="DeschideDialogAdaugaProiect">
+            Adaugă proiect
+        </MudButton>
+    }
+    else
+    {
+        <MudTextField T="string" @bind-Value="_cautare" Immediate="true" Clearable="true"
+                      Placeholder="Caută proiect..."
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                      Margin="Margin.Dense" Class="mb-3" />
+
+        <MudText Typo="Typo.subtitle2" Class="mb-2 mud-text-secondary">Toate proiectele</MudText>
+
+        @foreach (var proiect in ProiecteFiltrate)
+        {
+            <MudPaper Class="pa-3 mb-2" Elevation="0"
+                      Style="border: 1px solid var(--mud-palette-lines-default); border-radius: 10px; cursor: pointer;"
+                      @onclick="() => NavigheazaLaProiect(proiect)">
+                <div class="d-flex align-center">
+                    <MudAvatar Color="Color.Primary" Size="Size.Medium" Variant="Variant.Filled" Style="border-radius: 8px;">
+                        @Initiale(proiect.Nume)
+                    </MudAvatar>
+                    <div class="ml-3 flex-grow-1" style="min-width: 0;">
+                        <div class="d-flex justify-space-between align-center">
+                            <MudText Typo="Typo.body1" Class="font-weight-medium"
+                                     Style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                @proiect.Nume
+                            </MudText>
+                        </div>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            @proiect.ClientNume &middot; @proiect.ClientLocalitate
+                        </MudText>
+                    </div>
+                    <MudChip T="string" Color="@CuloareStatus(proiect.Status)" Size="Size.Small" Class="ma-0 ml-2">
+                        @NumeStatus(proiect.Status)
+                    </MudChip>
+                </div>
+
+                <MudDivider Class="my-2" />
+
+                <div class="d-flex justify-space-between align-center">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        @FormateazaLei(proiect.Valoare)
+                    </MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        @if (proiect.TermenLimita.HasValue)
+                        {
+                            @($"{FormateazaData(proiect.TermenLimita)} ({ZileRamase(proiect.TermenLimita.Value)})")
+                        }
+                        else
+                        {
+                            @("Fără termen")
+                        }
+                    </MudText>
+                </div>
+            </MudPaper>
+        }
+
+        @if (!ProiecteFiltrate.Any())
+        {
+            <MudText Typo="Typo.body2" Class="mud-text-secondary my-4" Align="Align.Center">
+                Niciun proiect nu corespunde căutării.
+            </MudText>
+        }
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Large" Class="mt-3"
+                   StartIcon="@Icons.Material.Filled.Add" OnClick="DeschideDialogAdaugaProiect">
+            Adaugă proiect
+        </MudButton>
+    }
+</div>
+
 @code {
     private List<ProiectDto>? _proiecte;
     private bool _seIncarca = true;
@@ -172,11 +261,28 @@
     private string _notaText = string.Empty;
     private bool _seSalveazaNota;
 
+    private string _cautare = string.Empty;
+
     protected override async Task OnInitializedAsync()
     {
         _proiecte = (await ProiectService.ObtineListaProiecteAsync()).ToList();
         _seIncarca = false;
     }
+
+    private bool FiltruProiecte(ProiectDto proiect)
+    {
+        if (string.IsNullOrWhiteSpace(_cautare)) return true;
+
+        var termen = _cautare.Trim();
+
+        return proiect.Nume.Contains(termen, StringComparison.OrdinalIgnoreCase)
+            || proiect.ClientNume.Contains(termen, StringComparison.OrdinalIgnoreCase)
+            || proiect.CodProiect.Contains(termen, StringComparison.OrdinalIgnoreCase)
+            || proiect.ClientLocalitate.Contains(termen, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private IEnumerable<ProiectDto> ProiecteFiltrate =>
+        _proiecte?.Where(FiltruProiecte) ?? Enumerable.Empty<ProiectDto>();
 
     private async Task DeschideDialogAdaugaProiect()
     {
@@ -208,6 +314,11 @@
     {
         if (_proiectSelectat is null) return;
         NavigationManager.NavigateTo($"/proiecte/{_proiectSelectat.Id}");
+    }
+
+    private void NavigheazaLaProiect(ProiectDto proiect)
+    {
+        NavigationManager.NavigateTo($"/proiecte/{proiect.Id}");
     }
 
     private int ProiecteActive => _proiecte?.Count(p => p.Status != StatusProiect.Finalizat) ?? 0;
