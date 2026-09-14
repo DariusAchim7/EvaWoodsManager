@@ -98,3 +98,13 @@ html {
 .mud-text-secondary {
     color: rgba(0, 0, 0, 0.87) !important;
 }
+
+@media (max-width: 700px) {
+    .mud-dialog {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        max-height: 100dvh !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+    }
+}
