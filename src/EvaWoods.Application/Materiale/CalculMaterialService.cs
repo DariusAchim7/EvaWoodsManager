@@ -68,7 +68,8 @@ public class CalculMaterialService : ICalculMaterialService
                     numarTipuri, numarBucati, suprafataM2,
                     foiTeoretice: 0, foiEstimate: 0, utilizareProcent: 0,
                     layoutJson: null,
-                    erori: "Materialul nu are dimensiunea plăcii configurată în catalog.");
+                    erori: "Materialul nu are dimensiunea plăcii configurată în catalog.",
+                    versiuneAlgoritm: OptimizatorDebitare.VersiuneCuranta);
                 continue;
             }
 
@@ -80,8 +81,13 @@ public class CalculMaterialService : ICalculMaterialService
             var pieseDeAsezat = new List<PiesaDeAsezat>();
             foreach (var piesa in pieseGrup)
             {
+                /*
+                 * O piesă cu fibră nu se rotește niciodată în optimizator —
+                 * rotirea ar schimba orientarea fibrei față de ce s-a dorit
+                 * (fibra e mereu pe lungimea piesei, prin convenție).
+                 */
                 var poateRoti = produs.PermiteRotire &&
-                    (piesa.DirectieFibra == DirectieFibra.Fara || piesa.PermiteRotire);
+                    piesa.DirectieFibra == DirectieFibra.Fara;
 
                 for (var i = 0; i < piesa.Cantitate; i++)
                 {
@@ -106,7 +112,8 @@ public class CalculMaterialService : ICalculMaterialService
                 rezultat.NumarFoi,
                 rezultat.UtilizareProcent,
                 JsonSerializer.Serialize(rezultat.Foi),
-                erori);
+                erori,
+                OptimizatorDebitare.VersiuneCuranta);
         }
 
         await _unitOfWork.SalveazaAsync(ct);
@@ -121,6 +128,12 @@ public class CalculMaterialService : ICalculMaterialService
             .Select(c =>
             {
                 produse.TryGetValue(c.MaterialProdusId, out var produs);
+                // Un calcul făcut cu o versiune veche de algoritm trebuie refăcut.
+                var status = c.Status == StatusCalculMaterial.Optimizat &&
+                    c.VersiuneAlgoritm != OptimizatorDebitare.VersiuneCuranta
+                        ? StatusCalculMaterial.NecesitaRecalculare
+                        : c.Status;
+
                 return new CalculMaterialDto(
                     c.Id,
                     c.MaterialProdusId,
@@ -138,7 +151,7 @@ public class CalculMaterialService : ICalculMaterialService
                     c.PierdereProcent,
                     c.LayoutJson,
                     c.Erori,
-                    c.Status,
+                    status,
                     c.DataCalcul,
                     produs?.PretEfectivCalcul);
             })

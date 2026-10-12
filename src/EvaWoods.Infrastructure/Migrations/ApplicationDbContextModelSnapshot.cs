@@ -17,7 +17,7 @@ namespace EvaWoods.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.18")
+                .HasAnnotation("ProductVersion", "9.0.20")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -215,6 +215,9 @@ namespace EvaWoods.Infrastructure.Migrations
                     b.Property<decimal>("UtilizareProcent")
                         .HasColumnType("numeric(5,2)");
 
+                    b.Property<int>("VersiuneAlgoritm")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("MaterialProdusId");
@@ -389,6 +392,9 @@ namespace EvaWoods.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<bool>("AreFibra")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Categorie")
                         .IsRequired()

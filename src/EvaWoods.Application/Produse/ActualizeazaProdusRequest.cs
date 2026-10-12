@@ -17,5 +17,6 @@ public record ActualizeazaProdusRequest(
     decimal? LatimeFoaieMm,
     decimal? GrosimeMm,
     bool PermiteRotire,
+    bool AreFibra,
     decimal? KerfMm,
     Guid? ServiciuAsociatId);

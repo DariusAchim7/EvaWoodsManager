@@ -40,6 +40,7 @@ public class ProdusService : IProdusService
             latimeFoaieMm: request.LatimeFoaieMm,
             grosimeMm: request.GrosimeMm,
             permiteRotire: request.PermiteRotire,
+            areFibra: request.AreFibra,
             kerfMm: request.KerfMm,
             serviciuAsociatId: request.ServiciuAsociatId);
 
@@ -74,7 +75,7 @@ public class ProdusService : IProdusService
                 p.Id, p.Cod, p.Nume, p.Categorie, p.Subcategorie, p.UM,
                 p.PretAchizitie, p.PretCalcul, p.ProcentTva,
                 p.FurnizorId, numeFurnizor, p.EsteActiv, p.DataUltimeiActualizariPret, p.Observatii,
-                p.LungimeFoaieMm, p.LatimeFoaieMm, p.GrosimeMm, p.PermiteRotire, p.KerfMm,
+                p.LungimeFoaieMm, p.LatimeFoaieMm, p.GrosimeMm, p.PermiteRotire, p.AreFibra, p.KerfMm,
                 p.ServiciuAsociatId, numeServiciu);
         }).ToList();
     }
@@ -98,6 +99,7 @@ public class ProdusService : IProdusService
             latimeFoaieMm: request.LatimeFoaieMm,
             grosimeMm: request.GrosimeMm,
             permiteRotire: request.PermiteRotire,
+            areFibra: request.AreFibra,
             kerfMm: request.KerfMm,
             serviciuAsociatId: request.ServiciuAsociatId);
 

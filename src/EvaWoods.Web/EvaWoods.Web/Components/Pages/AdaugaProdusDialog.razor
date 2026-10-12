@@ -93,6 +93,9 @@
                     <MudItem xs="6" Class="d-flex align-center">
                         <MudCheckBox T="bool" @bind-Value="_model.PermiteRotire" Label="Permite rotire piese 90°" />
                     </MudItem>
+                    <MudItem xs="6" Class="d-flex align-center">
+                        <MudCheckBox T="bool" @bind-Value="_model.AreFibra" Label="Are fibră (pe lungime)" />
+                    </MudItem>
                 </MudGrid>
             }
             @if (_model.Categorie == CategorieProdus.Materiale || _model.Categorie == CategorieProdus.Consumabile)
@@ -150,6 +153,7 @@
             _model.LatimeFoaieMm = ProdusDeEditat.LatimeFoaieMm;
             _model.GrosimeMm = ProdusDeEditat.GrosimeMm;
             _model.PermiteRotire = ProdusDeEditat.PermiteRotire;
+            _model.AreFibra = ProdusDeEditat.AreFibra;
             _model.KerfMm = ProdusDeEditat.KerfMm ?? 4m;
             _model.ServiciuAsociatId = ProdusDeEditat.ServiciuAsociatId;
         }
@@ -197,6 +201,7 @@
                 LatimeFoaieMm: _model.LatimeFoaieMm,
                 GrosimeMm: _model.GrosimeMm,
                 PermiteRotire: _model.PermiteRotire,
+                AreFibra: _model.AreFibra,
                 KerfMm: _model.KerfMm,
                 ServiciuAsociatId: _model.ServiciuAsociatId));
         }
@@ -216,6 +221,7 @@
                 LatimeFoaieMm: _model.LatimeFoaieMm,
                 GrosimeMm: _model.GrosimeMm,
                 PermiteRotire: _model.PermiteRotire,
+                AreFibra: _model.AreFibra,
                 KerfMm: _model.KerfMm,
                 ServiciuAsociatId: _model.ServiciuAsociatId));
         }
@@ -241,6 +247,7 @@
         public decimal? LatimeFoaieMm { get; set; }
         public decimal? GrosimeMm { get; set; }
         public bool PermiteRotire { get; set; }
+        public bool AreFibra { get; set; }
         public decimal? KerfMm { get; set; } = 4m;
         public Guid? ServiciuAsociatId { get; set; }
     }

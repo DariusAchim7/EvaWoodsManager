@@ -23,6 +23,7 @@ public class Produs
     public decimal? LatimeFoaieMm { get; private set; }
     public decimal? GrosimeMm { get; private set; }
     public bool PermiteRotire { get; private set; }
+    public bool AreFibra { get; private set; }
     public decimal? KerfMm { get; private set; }
 
     public decimal PretEfectivCalcul => PretCalcul ?? PretAchizitie;
@@ -44,8 +45,10 @@ public class Produs
         decimal? latimeFoaieMm = null,
         decimal? grosimeMm = null,
         bool permiteRotire = false,
+        bool areFibra = false,
         decimal? kerfMm = null,
         Guid? serviciuAsociatId = null)
+    {
     {
         if (string.IsNullOrWhiteSpace(nume))
             throw new ArgumentException("Numele produsului este obligatoriu.", nameof(nume));
@@ -81,12 +84,13 @@ public class Produs
             LatimeFoaieMm = categorie == CategorieProdus.Materiale ? latimeFoaieMm : null,
             GrosimeMm = categorie == CategorieProdus.Materiale ? grosimeMm : null,
             PermiteRotire = categorie == CategorieProdus.Materiale && permiteRotire,
+            AreFibra = categorie == CategorieProdus.Materiale && areFibra,
             KerfMm = categorie == CategorieProdus.Materiale ? (kerfMm ?? 4m) : null,
             ServiciuAsociatId = serviciuAsociatId,
             DataCreare = DateTime.UtcNow
             
         };
-    }
+    }}
 
     public void Actualizeaza(
         string nume,
@@ -102,8 +106,10 @@ public class Produs
         decimal? latimeFoaieMm,
         decimal? grosimeMm,
         bool permiteRotire,
+        bool areFibra,
         decimal? kerfMm,
         Guid? serviciuAsociatId)
+    {
     {
         if (string.IsNullOrWhiteSpace(nume))
             throw new ArgumentException("Numele produsului este obligatoriu.", nameof(nume));
@@ -125,6 +131,7 @@ public class Produs
         LatimeFoaieMm = categorie == CategorieProdus.Materiale ? latimeFoaieMm : null;
         GrosimeMm = categorie == CategorieProdus.Materiale ? grosimeMm : null;
         PermiteRotire = categorie == CategorieProdus.Materiale && permiteRotire;
+        AreFibra = categorie == CategorieProdus.Materiale && areFibra;
         KerfMm = categorie == CategorieProdus.Materiale ? (kerfMm ?? 4m) : null;
         ServiciuAsociatId = serviciuAsociatId;
 
@@ -133,6 +140,7 @@ public class Produs
         {
             DataUltimeiActualizariPret = DateTime.UtcNow;
         }
+    }
     }
 
     public void ComutaActiv()

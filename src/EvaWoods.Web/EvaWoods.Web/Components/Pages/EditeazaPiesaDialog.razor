@@ -7,9 +7,7 @@
 
 <MudDialog>
     <DialogContent>
-        <MudTextField @bind-Value="_model.Nume" Label="Denumire (opțional)" />
-
-        <MudGrid Class="mt-1">
+        <MudGrid>
             <MudItem xs="4">
                 <MudNumericField T="decimal?" @bind-Value="_model.Lungime" Label="Lungime (mm)" Min="0m" Required="true" />
             </MudItem>
@@ -22,31 +20,44 @@
         </MudGrid>
 
         <MudGrid Class="mt-1">
-            <MudItem xs="6">
-                <MudSelect T="Guid?" @bind-Value="_model.CorpId" Label="Corp" Clearable="true">
-                    @foreach (var corp in _corpuri)
-                    {
-                        <MudSelectItem T="Guid?" Value="corp.Id">@corp.Nume</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="6">
-                <MudSelect T="Guid?" @bind-Value="_model.MaterialId" Label="Material" Clearable="true">
+            <MudItem xs="12" sm="6">
+                <MudSelect T="Guid?" @bind-Value="_model.MaterialId" Label="Material">
                     @foreach (var material in _materiale)
                     {
                         <MudSelectItem T="Guid?" Value="material.Id">@material.Nume</MudSelectItem>
                     }
                 </MudSelect>
             </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="Guid?" @bind-Value="_model.MaterialCantId" Label="Material cant" Clearable="true">
+                    @foreach (var cant in _materialeCant)
+                    {
+                        <MudSelectItem T="Guid?" Value="cant.Id">@cant.Nume</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
         </MudGrid>
 
+        @if (MaterialSelectat is not null)
+        {
+            <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="mt-2">
+                @if (MaterialSelectat.GrosimeMm.HasValue)
+                {
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Grosime @MaterialSelectat.GrosimeMm.Value.ToString("0.##") mm</MudChip>
+                }
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                    @(MaterialSelectat.PermiteRotire ? "Rotire permisă" : "Fără rotire")
+                </MudChip>
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                    @(MaterialSelectat.AreFibra ? "Cu fibră — pe lungimea piesei" : "Fără fibră")
+                </MudChip>
+            </MudStack>
+        }
+
         <MudGrid Class="mt-1">
-            <MudItem xs="4">
-                <MudNumericField T="decimal?" @bind-Value="_model.Grosime" Label="Grosime (mm)" Min="0m" />
-            </MudItem>
             @if (EstePatrata)
             {
-                <MudItem xs="8">
+                <MudItem xs="12">
                     <MudSelect T="int" @bind-Value="_model.TotalCantPatrat" Label="Total laturi cu cant (0-4)">
                         <MudSelectItem T="int" Value="0">0</MudSelectItem>
                         <MudSelectItem T="int" Value="1">1</MudSelectItem>
@@ -58,14 +69,14 @@
             }
             else
             {
-                <MudItem xs="4">
+                <MudItem xs="6">
                     <MudSelect T="int" @bind-Value="_model.CantLungi" Label="Cant laturi lungi">
                         <MudSelectItem T="int" Value="0">0</MudSelectItem>
                         <MudSelectItem T="int" Value="1">1</MudSelectItem>
                         <MudSelectItem T="int" Value="2">2</MudSelectItem>
                     </MudSelect>
                 </MudItem>
-                <MudItem xs="4">
+                <MudItem xs="6">
                     <MudSelect T="int" @bind-Value="_model.CantScurte" Label="Cant laturi scurte">
                         <MudSelectItem T="int" Value="0">0</MudSelectItem>
                         <MudSelectItem T="int" Value="1">1</MudSelectItem>
@@ -75,25 +86,6 @@
             }
         </MudGrid>
 
-        <MudGrid Class="mt-1">
-            <MudItem xs="6">
-                <MudSelect T="Guid?" @bind-Value="_model.MaterialCantId" Label="Material cant" Clearable="true">
-                    @foreach (var cant in _materialeCant)
-                    {
-                        <MudSelectItem T="Guid?" Value="cant.Id">@cant.Nume</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="6">
-                <MudSelect T="DirectieFibra" @bind-Value="_model.Fibra" Label="Direcție fibră">
-                    <MudSelectItem T="DirectieFibra" Value="DirectieFibra.Fara">Fără</MudSelectItem>
-                    <MudSelectItem T="DirectieFibra" Value="DirectieFibra.Verticala">Verticală</MudSelectItem>
-                    <MudSelectItem T="DirectieFibra" Value="DirectieFibra.Orizontala">Orizontală</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-        </MudGrid>
-
-        <MudCheckBox T="bool" @bind-Value="_model.Rotire" Label="Permite rotire 90°" Class="mt-1" />
         <MudTextField @bind-Value="_model.Observatii" Label="Observații (opțional)" Lines="2" Class="mt-1" />
     </DialogContent>
     <DialogActions>
@@ -107,7 +99,6 @@
     [Parameter] public Guid ProiectId { get; set; }
     [Parameter] public PiesaDto PiesaDeEditat { get; set; } = default!;
 
-    private List<CorpProiectDto> _corpuri = new();
     private List<ProdusDto> _materiale = new();
     private List<ProdusDto> _materialeCant = new();
     private bool _seSalveaza;
@@ -115,27 +106,23 @@
 
     private bool EstePatrata => _model.Lungime is > 0 && _model.Latime is > 0 && _model.Lungime == _model.Latime;
 
+    private ProdusDto? MaterialSelectat =>
+        _model.MaterialId.HasValue ? _materiale.FirstOrDefault(m => m.Id == _model.MaterialId.Value) : null;
+
     protected override async Task OnInitializedAsync()
     {
-        _corpuri = (await PiesaService.ObtineCorpuriDupaProiectAsync(ProiectId)).ToList();
-
         var produse = await ProdusService.ObtineToateProduseleAsync();
         _materiale = produse.Where(p => p.EsteActiv && p.Categorie == CategorieProdus.Materiale).ToList();
         _materialeCant = produse.Where(p => p.EsteActiv && p.Categorie == CategorieProdus.Consumabile).ToList();
 
-        _model.Nume = PiesaDeEditat.Nume;
         _model.Lungime = PiesaDeEditat.LungimeMm;
         _model.Latime = PiesaDeEditat.LatimeMm;
         _model.Cantitate = PiesaDeEditat.Cantitate;
-        _model.CorpId = PiesaDeEditat.CorpId;
         _model.MaterialId = PiesaDeEditat.MaterialProdusId;
-        _model.Grosime = PiesaDeEditat.GrosimeMm;
         _model.CantLungi = PiesaDeEditat.CantLaturiLungi;
         _model.CantScurte = PiesaDeEditat.CantLaturiScurte;
         _model.TotalCantPatrat = PiesaDeEditat.CantLaturiLungi + PiesaDeEditat.CantLaturiScurte;
         _model.MaterialCantId = PiesaDeEditat.MaterialCantProdusId;
-        _model.Fibra = PiesaDeEditat.DirectieFibra;
-        _model.Rotire = PiesaDeEditat.PermiteRotire;
         _model.Observatii = PiesaDeEditat.Observatii;
     }
 
@@ -157,20 +144,29 @@
             scurte = _model.CantScurte;
         }
 
+        // Grosimea, rotirea și fibra vin din material.
+        // Dacă piesa nu are material (piese vechi), păstrăm valorile existente.
+        var material = MaterialSelectat;
+        var grosime = material is not null ? material.GrosimeMm : PiesaDeEditat.GrosimeMm;
+        var permiteRotire = material is not null ? material.PermiteRotire : PiesaDeEditat.PermiteRotire;
+        var fibra = material is not null
+            ? (material.AreFibra ? DirectieFibra.Verticala : DirectieFibra.Fara)
+            : PiesaDeEditat.DirectieFibra;
+
         await PiesaService.ActualizeazaPiesaAsync(new ActualizeazaPiesaRequest(
             Id: PiesaDeEditat.Id,
             LungimeMm: _model.Lungime.Value,
             LatimeMm: _model.Latime.Value,
             Cantitate: _model.Cantitate.Value,
-            Nume: _model.Nume,
-            CorpId: _model.CorpId,
+            Nume: PiesaDeEditat.Nume,
+            CorpId: PiesaDeEditat.CorpId,
             MaterialProdusId: _model.MaterialId,
-            GrosimeMm: _model.Grosime,
+            GrosimeMm: grosime,
             CantLaturiLungi: lungi,
             CantLaturiScurte: scurte,
             MaterialCantProdusId: _model.MaterialCantId,
-            DirectieFibra: _model.Fibra,
-            PermiteRotire: _model.Rotire,
+            DirectieFibra: fibra,
+            PermiteRotire: permiteRotire,
             Observatii: _model.Observatii));
 
         _seSalveaza = false;
@@ -181,19 +177,14 @@
 
     private class ModelPiesa
     {
-        public string? Nume { get; set; }
         public decimal? Lungime { get; set; }
         public decimal? Latime { get; set; }
         public int? Cantitate { get; set; }
-        public Guid? CorpId { get; set; }
         public Guid? MaterialId { get; set; }
-        public decimal? Grosime { get; set; }
         public int CantLungi { get; set; }
         public int CantScurte { get; set; }
         public int TotalCantPatrat { get; set; }
         public Guid? MaterialCantId { get; set; }
-        public DirectieFibra Fibra { get; set; } = DirectieFibra.Fara;
-        public bool Rotire { get; set; }
         public string? Observatii { get; set; }
     }
 }

@@ -16,5 +16,6 @@ public record CreeazaProdusRequest(
     decimal? LatimeFoaieMm = null,
     decimal? GrosimeMm = null,
     bool PermiteRotire = false,
+    bool AreFibra = false,
     decimal? KerfMm = null,
     Guid? ServiciuAsociatId = null);

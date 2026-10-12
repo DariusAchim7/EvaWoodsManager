@@ -638,12 +638,6 @@ else
                             </MudItem>
                             <MudItem xs="6" sm="4" md="2">
                                 <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
-                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Piese neasociate</MudText>
-                                    <MudText Typo="Typo.h5" Class="font-weight-bold" Style="@(PieseNeasociate > 0 ? "color: var(--mud-palette-warning);" : "")">@PieseNeasociate</MudText>
-                                </MudPaper>
-                            </MudItem>
-                            <MudItem xs="6" sm="4" md="2">
-                                <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
                                     <MudText Typo="Typo.caption" Class="mud-text-secondary">Piese fără material</MudText>
                                     <MudText Typo="Typo.h5" Class="font-weight-bold" Style="@(PieseFaraMaterial > 0 ? "color: var(--mud-palette-error);" : "")">@PieseFaraMaterial</MudText>
                                 </MudPaper>
@@ -664,12 +658,48 @@ else
                                         Combină duplicatele
                                     </MudButton>
                                 </MudStack>
-                                <MudTable Items="@_piese" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm">
+                                <div class="d-md-none">
+                                    @foreach (var piesaMob in _piese)
+                                    {
+                                        <MudPaper Class="pa-3 mb-2" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); border-radius: 10px;">
+                                            <div class="d-flex justify-space-between align-start">
+                                                <div>
+                                                    <MudText Typo="Typo.body1" Class="font-weight-medium">@($"{piesaMob.LungimeMm:0.#} × {piesaMob.LatimeMm:0.#} mm")</MudText>
+                                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@($"{piesaMob.Cantitate} buc")</MudText>
+                                                </div>
+                                                <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small">
+                                                    <MudMenuItem OnClick="@(() => DeschideDialogEditeazaPiesa(piesaMob))">Editează</MudMenuItem>
+                                                    <MudMenuItem OnClick="@(() => DuplicaPiesa(piesaMob.Id))">Duplică</MudMenuItem>
+                                                    <MudMenuItem OnClick="@(() => StergePiesa(piesaMob.Id))">Șterge</MudMenuItem>
+                                                </MudMenu>
+                                            </div>
+                                            <div class="mt-1">
+                                                @if (piesaMob.MaterialNume is not null)
+                                                {
+                                                    <MudText Typo="Typo.body2">@piesaMob.MaterialNume</MudText>
+                                                }
+                                                else
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" Color="Color.Error" Class="ma-0">Fără material</MudChip>
+                                                }
+                                            </div>
+                                            <MudDivider Class="my-2" />
+                                            <div class="d-flex justify-space-between align-center">
+                                                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                                    @(piesaMob.TotalCantMl > 0 ? $"Cant: {piesaMob.CantLaturiLungi}L + {piesaMob.CantLaturiScurte}S · {piesaMob.TotalCantMl:0.##} ml" : "Fără cant")
+                                                </MudText>
+                                                @if (piesaMob.DirectieFibra != DirectieFibra.Fara)
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="ma-0">Fibră: @NumeFibra(piesaMob.DirectieFibra)</MudChip>
+                                                }
+                                            </div>
+                                        </MudPaper>
+                                    }
+                                </div>
+                                <MudTable Items="@_piese" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm" Class="d-none d-md-block">
                                     <HeaderContent>
-                                        <MudTh>Denumire</MudTh>
                                         <MudTh>Dimensiuni</MudTh>
                                         <MudTh>Bucăți</MudTh>
-                                        <MudTh>Corp</MudTh>
                                         <MudTh>Material</MudTh>
                                         <MudTh>Cant lungi</MudTh>
                                         <MudTh>Cant scurte</MudTh>
@@ -678,10 +708,8 @@ else
                                         <MudTh></MudTh>
                                     </HeaderContent>
                                     <RowTemplate>
-                                        <MudTd DataLabel="Denumire">@(context.Nume ?? "-")</MudTd>
                                         <MudTd DataLabel="Dimensiuni">@($"{context.LungimeMm:0.#} × {context.LatimeMm:0.#} mm")</MudTd>
                                         <MudTd DataLabel="Bucăți">@context.Cantitate</MudTd>
-                                        <MudTd DataLabel="Corp">@(context.CorpNume ?? "-")</MudTd>
                                         <MudTd DataLabel="Material">
                                             @if (context.MaterialNume is not null)
                                             {
@@ -777,7 +805,43 @@ else
                             {
                                 <MudPaper Class="pa-4 mb-4" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
                                     <MudText Typo="Typo.h6" Class="mb-3">Materiale pe plăci</MudText>
-                                    <MudTable Items="@_calcule" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm" T="CalculMaterialDto" OnRowClick="@(args => DeschideDialogPlanTaiere(args.Item))" RowStyle="cursor: pointer;">
+                                   <div class="d-md-none">
+                                        @foreach (var calcMob in _calcule)
+                                        {
+                                            <MudPaper Class="pa-3 mb-2" Elevation="0"
+                                                    Style="border: 1px solid var(--mud-palette-lines-default); border-radius: 10px; cursor: pointer;"
+                                                    @onclick="() => DeschideDialogPlanTaiere(calcMob)">
+                                                <div class="d-flex justify-space-between align-start">
+                                                    <div style="min-width: 0;">
+                                                        <MudText Typo="Typo.body1" Class="font-weight-medium">@calcMob.MaterialNume</MudText>
+                                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                                            @(calcMob.GrosimeMm.HasValue ? $"{calcMob.GrosimeMm:0.#} mm" : "-")@(calcMob.LungimeFoaieMm.HasValue && calcMob.LatimeFoaieMm.HasValue ? $" · placă {calcMob.LungimeFoaieMm:0} × {calcMob.LatimeFoaieMm:0} mm" : "")
+                                                        </MudText>
+                                                    </div>
+                                                    <MudChip T="string" Size="Size.Small" Color="@CuloareStatusCalcul(calcMob.Status)" Class="ma-0 ml-2" Style="flex-shrink: 0;">
+                                                        @NumeStatusCalcul(calcMob.Status)
+                                                    </MudChip>
+                                                </div>
+                                                <div class="d-flex justify-space-between align-end mt-2">
+                                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                                        @($"{calcMob.NumarTipuriPiese} tipuri · {calcMob.NumarBucati} buc · {calcMob.SuprafataPieseM2:0.##} m²")
+                                                    </MudText>
+                                                    <MudText Typo="Typo.body1" Class="font-weight-bold">@($"{calcMob.FoiEstimate} foi")</MudText>
+                                                </div>
+                                                @if (calcMob.UtilizareProcent > 0)
+                                                {
+                                                    <MudProgressLinear Color="Color.Success" Value="@((double)calcMob.UtilizareProcent)" Rounded="true" Class="mt-2" />
+                                                    <div class="d-flex justify-space-between mt-1">
+                                                        <MudText Typo="Typo.caption">@($"Utilizare {calcMob.UtilizareProcent:0.#}%")</MudText>
+                                                        <MudText Typo="Typo.caption" Style="@(calcMob.PierdereProcent > 25 ? "color: var(--mud-palette-error);" : "color: var(--mud-palette-warning);")">
+                                                            @($"Pierdere {calcMob.PierdereProcent:0.#}%")
+                                                        </MudText>
+                                                    </div>
+                                                }
+                                            </MudPaper>
+                                        }
+                                    </div>
+                                    <MudTable Items="@_calcule" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm" T="CalculMaterialDto" OnRowClick="@(args => DeschideDialogPlanTaiere(args.Item))" RowStyle="cursor: pointer;" Class="d-none d-md-block">
                                         <HeaderContent>
                                             <MudTh>Material</MudTh>
                                             <MudTh>Grosime</MudTh>
@@ -852,7 +916,24 @@ else
                                     }
                                     else
                                     {
-                                        <MudTable Items="@GrupuriCant" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm">
+                                        <div class="d-md-none">
+                                            @foreach (var grupMob in GrupuriCant)
+                                            {
+                                                <MudPaper Class="pa-3 mb-2" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); border-radius: 10px;">
+                                                    <div class="d-flex justify-space-between align-start">
+                                                        <MudText Typo="Typo.body1" Class="font-weight-medium">@grupMob.Nume</MudText>
+                                                        <MudText Typo="Typo.body1" Class="font-weight-bold">@($"{grupMob.OfertaMl:0} ml")</MudText>
+                                                    </div>
+                                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@($"Necesar {grupMob.NecesarMl:0.##} ml + 5% rezervă")</MudText>
+                                                    <MudDivider Class="my-2" />
+                                                    <div class="d-flex justify-space-between">
+                                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@(grupMob.PretUnitar.HasValue ? $"{grupMob.PretUnitar:N2} lei/ml" : "Fără preț")</MudText>
+                                                        <MudText Typo="Typo.body2">@(grupMob.Total.HasValue ? $"{grupMob.Total:N2} lei" : "-")</MudText>
+                                                    </div>
+                                                </MudPaper>
+                                            }
+                                        </div>
+                                        <MudTable Items="@GrupuriCant" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm" Class="d-none d-md-block">
                                             <HeaderContent>
                                                 <MudTh>Cant</MudTh>
                                                 <MudTh>Necesar calculat</MudTh>
@@ -886,6 +967,16 @@ else
                     <div class="mt-4">
                         <MudTabs Elevation="0" Rounded="true">
                             <MudTabPanel Text="Calcul preț">
+                                <div class="d-md-none mt-3">
+                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Large"
+                                            StartIcon="@Icons.Material.Filled.Add" OnClick="DeschideDialogAdaugaLinieOferta">
+                                        Adaugă rând
+                                    </MudButton>
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" Class="mt-2"
+                                            StartIcon="@Icons.Material.Filled.Sync" OnClick="SincronizeazaMateriale" Disabled="_seSincronizeaza">
+                                        Sincronizează materiale și cant
+                                    </MudButton>
+                                </div>
                                 <div class="mt-4">
                                     <MudGrid Class="mb-4">
                                         <MudItem xs="6" sm="3">
@@ -939,7 +1030,7 @@ else
                                     </MudGrid>
                                     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
                                         <MudText Typo="Typo.h6">Calcul preț</MudText>
-                                        <MudStack Row="true" Spacing="2">
+                                        <MudStack Row="true" Spacing="2" Class="d-none d-md-flex">
                                             <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Sync"
                                                     OnClick="SincronizeazaMateriale" Disabled="_seSincronizeaza">
                                                 Sincronizează materiale și cant
@@ -980,7 +1071,44 @@ else
                                                 </MudPaper>
                                             }
                                         }
-                                        <MudTable Items="@_liniiOferta" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm">
+                                        <div class="d-md-none">
+                                            @foreach (var linieMob in _liniiOferta)
+                                            {
+                                                <MudPaper Class="pa-3 mb-2" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default); border-radius: 10px;">
+                                                    <div class="d-flex justify-space-between align-start">
+                                                        <MudText Typo="Typo.body1" Class="font-weight-medium" Style="min-width: 0;">@linieMob.Descriere</MudText>
+                                                        <MudChip T="string" Size="Size.Small" Color="@CuloareSursaOferta(linieMob)" Class="ma-0 ml-2" Style="flex-shrink: 0;">
+                                                            @NumeSursaOferta(linieMob)
+                                                        </MudChip>
+                                                    </div>
+                                                    <div class="d-flex justify-space-between align-end mt-1">
+                                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                                            @($"{linieMob.CantitateOfertata:0.##} {NumeUMOferta(linieMob.UM)} × {linieMob.PretVanzare:N2} lei")
+                                                        </MudText>
+                                                        <MudText Typo="Typo.body1" Class="font-weight-bold">@($"{linieMob.Total:N2} lei")</MudText>
+                                                    </div>
+                                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                                        @($"Cost {linieMob.PretCost:N2} lei")@(linieMob.CantitateCalculata != linieMob.CantitateOfertata ? $" · calculat {linieMob.CantitateCalculata:0.##}" : "")
+                                                    </MudText>
+                                                    <MudDivider Class="my-2" />
+                                                    <div class="d-flex justify-space-between align-center">
+                                                        <MudSwitch T="bool" Value="@linieMob.VizibilClient" ValueChanged="@(_ => ComutaVizibilClientOferta(linieMob.Id))" Color="Color.Success" Label="Vizibil client" />
+                                                        @if (linieMob.EsteAutomat)
+                                                        {
+                                                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Automat — din Materiale</MudText>
+                                                        }
+                                                        else
+                                                        {
+                                                            <MudStack Row="true" Spacing="0">
+                                                                <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" OnClick="@(() => DeschideDialogEditeazaCantitateOferta(linieMob))" />
+                                                                <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" OnClick="@(() => StergeLinieOferta(linieMob.Id))" />
+                                                            </MudStack>
+                                                        }
+                                                    </div>
+                                                </MudPaper>
+                                            }
+                                        </div>
+                                        <MudTable Items="@_liniiOferta" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm" Class="d-none d-md-block">
                                             <HeaderContent>
                                                 <MudTh>Descriere</MudTh>
                                                 <MudTh>Sursă</MudTh>

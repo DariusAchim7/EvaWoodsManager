@@ -25,6 +25,7 @@ public class CalculMaterial
     public string? Erori { get; private set; }
     public StatusCalculMaterial Status { get; private set; }
     public DateTime DataCalcul { get; private set; }
+        public int VersiuneAlgoritm { get; private set; }
 
     private CalculMaterial() { }
 
@@ -53,7 +54,8 @@ public class CalculMaterial
         int foiEstimate,
         decimal utilizareProcent,
         string? layoutJson,
-        string? erori)
+        string? erori,
+            int versiuneAlgoritm)
     {
         NumarTipuriPiese = numarTipuriPiese;
         NumarBucati = numarBucati;
@@ -65,6 +67,7 @@ public class CalculMaterial
         LayoutJson = layoutJson;
         Erori = erori;
         Status = string.IsNullOrWhiteSpace(erori) ? StatusCalculMaterial.Optimizat : StatusCalculMaterial.CuErori;
+        VersiuneAlgoritm = versiuneAlgoritm;
         DataCalcul = DateTime.UtcNow;
     }
 

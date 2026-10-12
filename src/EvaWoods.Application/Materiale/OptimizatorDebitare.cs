@@ -29,6 +29,18 @@ public record RezultatOptimizare(
 
 public static class OptimizatorDebitare
 {
+        /*
+    * Istoricul versiunilor de algoritm.
+    *
+    * 1 = varianta initiala: sortare doar pe suprafata, best short side fit.
+    * 2 = sortare max latura -> min latura -> arie, Best Long Side Fit,
+    *     ambele splituri guillotine; piesele cu fibra nu se rotesc.
+    *
+    * Incrementeaza la ORICE schimbare care poate produce alte rezultate:
+    * calculele salvate cu alta versiune apar automat ca "Necesita recalculare".
+    */
+    public const int VersiuneCuranta = 2;
+
     private record DreptunghiLiber(
         decimal X,
         decimal Y,
